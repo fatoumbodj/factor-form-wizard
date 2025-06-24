@@ -19,17 +19,43 @@ export const PDFExport: React.FC<PDFExportProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
 
-  const generateQRCodeUrl = (url: string) => {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
+  const generateFileInfoQR = (fileName: string, mediaType: string) => {
+    const currentDate = new Date().toLocaleDateString('fr-FR');
+    const dataUrl = `https://chatbook.app/file?name=${encodeURIComponent(fileName)}&type=${mediaType}&date=${encodeURIComponent(currentDate)}&source=whatsapp`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(dataUrl)}&bgcolor=ffffff&color=000000&margin=0&ecc=M`;
   };
 
-  // Fonction pour générer une image de démonstration
-  const getPlaceholderImage = (mediaType: string, fileName: string) => {
-    const encodedText = encodeURIComponent(`${mediaType.toUpperCase()}\n${fileName}`);
-    return `https://via.placeholder.com/200x150/f3f4f6/374151?text=${encodedText}`;
+  const blobToBase64 = async (url: string): Promise<string | null> => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Erreur conversion blob vers base64:', error);
+      return null;
+    }
   };
 
-  const generatePDFContent = () => {
+  const generatePDFContent = async () => {
+    console.log('🔄 Conversion des images en base64...');
+    const imageMessages = messages.filter(m => m.type === 'media' && m.mediaType === 'image' && m.mediaUrl);
+    const imageBase64Map = new Map<string, string>();
+    
+    for (const message of imageMessages) {
+      if (message.mediaUrl) {
+        const base64 = await blobToBase64(message.mediaUrl);
+        if (base64) {
+          imageBase64Map.set(message.mediaUrl, base64);
+          console.log('✅ Image convertie:', message.fileName);
+        }
+      }
+    }
+
     const groupedMessages = messages.reduce((groups, message) => {
       const date = message.timestamp.toDateString();
       if (!groups[date]) {
@@ -39,15 +65,14 @@ export const PDFExport: React.FC<PDFExportProps> = ({
       return groups;
     }, {} as Record<string, WhatsAppMessage[]>);
 
-    // Créer plus de messages par page (15-20 au lieu de 5-10)
-    const messagesPerPage = 20;
+    const messagesPerPage = 35;
     const pages: any[] = [];
     
     Object.entries(groupedMessages).forEach(([date, dayMessages]) => {
       for (let i = 0; i < dayMessages.length; i += messagesPerPage) {
         const pageMessages = dayMessages.slice(i, i + messagesPerPage);
         pages.push({
-          date: i === 0 ? date : null, // Afficher la date seulement sur la première page du jour
+          date: i === 0 ? date : null,
           messages: pageMessages
         });
       }
@@ -57,37 +82,46 @@ export const PDFExport: React.FC<PDFExportProps> = ({
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${settings.title}</title>
     <style>
         @page {
             size: A4;
-            margin: 15mm;
+            margin: 0;
         }
-        
-        body {
-            font-family: ${settings.fontFamily}, sans-serif;
+        * {
             margin: 0;
             padding: 0;
-            line-height: 1.4;
-            font-size: 10pt;
+            box-sizing: border-box;
         }
-        
+        body {
+            font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.3;
+            font-size: 9pt;
+            color: #1a1a1a;
+            background: white;
+            width: 100%;
+        }
         .page {
-            min-height: calc(100vh - 30mm);
+            min-height: 100vh;
             page-break-after: always;
+            width: 100%;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
         }
-        
         .page:last-child {
             page-break-after: avoid;
         }
-        
-        /* Page de couverture */
+        .page-content {
+            width: 66.66%;
+            max-width: none;
+            padding: 6mm 0;
+        }
         .cover-page {
-            background: linear-gradient(135deg, ${settings.coverColor}, ${adjustBrightness(settings.coverColor, -20)});
+            background: linear-gradient(135deg, ${settings.coverColor}, ${adjustBrightness(settings.coverColor, -15)});
             color: white;
             text-align: center;
             display: flex;
@@ -95,197 +129,198 @@ export const PDFExport: React.FC<PDFExportProps> = ({
             justify-content: center;
             align-items: center;
             padding: 40mm 20mm;
+            width: 100%;
+            height: 100vh;
         }
-        
         .cover-page h1 {
-            font-size: 36pt;
-            margin: 0 0 10mm 0;
-            font-weight: bold;
+            font-size: 32pt;
+            margin: 0 0 8mm 0;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
-        
         .cover-page .subtitle {
-            font-size: 18pt;
-            margin: 0 0 15mm 0;
-            opacity: 0.9;
+            font-size: 16pt;
+            margin: 0 0 12mm 0;
+            opacity: 0.95;
+            font-weight: 300;
         }
-        
         .cover-page .info {
-            font-size: 14pt;
+            font-size: 12pt;
             line-height: 1.6;
+            font-weight: 400;
         }
-        
-        /* Pages de contenu */
-        .content-page {
-            padding: 10mm 0;
+        .content-page-inner {
+            width: 100%;
+            background: white;
         }
-        
         .date-header {
             text-align: center;
-            margin: 0 0 8mm 0;
-            padding: 3mm 0;
+            margin: 0 0 6mm 0;
+            padding: 2mm 0;
             border-bottom: 1px solid #e5e7eb;
         }
-        
         .date-header span {
-            background: #f3f4f6;
-            padding: 2mm 6mm;
-            border-radius: 4mm;
+            background: #f8fafc;
+            padding: 1.5mm 4mm;
+            border-radius: 3mm;
             font-weight: 600;
             color: #374151;
-            font-size: 11pt;
+            font-size: 10pt;
+            border: 1px solid #e2e8f0;
         }
-        
         .messages-container {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 2mm;
+            gap: 1mm;
+            width: 100%;
         }
-        
         .message {
             display: flex;
-            margin: 1mm 0;
-            max-width: 80%;
+            margin: 0.5mm 0;
+            width: 100%;
             clear: both;
+            width: 100%;
         }
-        
         .message.own {
-            margin-left: auto;
             justify-content: flex-end;
         }
-        
         .message-bubble {
             padding: 2mm 3mm;
-            border-radius: 3mm;
+            border-radius: 2.5mm;
             word-wrap: break-word;
             position: relative;
-            max-width: 100%;
-        }
-        
-        .message.own .message-bubble {
-            background: ${settings.coverColor};
-            color: white;
-            border-bottom-right-radius: 1mm;
-        }
-        
-        .message:not(.own) .message-bubble {
-            background: #f3f4f6;
-            color: #1f2937;
-            border-bottom-left-radius: 1mm;
-        }
-        
-        .sender {
-            font-size: 8pt;
-            color: #6b7280;
-            margin-bottom: 1mm;
-            font-weight: 600;
-        }
-        
-        .message-content {
-            font-size: 10pt;
-            line-height: 1.3;
-        }
-        
-        .timestamp {
-            font-size: 7pt;
-            opacity: 0.7;
-            margin-top: 1mm;
-            text-align: right;
-        }
-        
-        /* Styles pour les médias */
-        .media-container {
-            margin: 2mm 0;
-            padding: 3mm;
-            background: #f9fafb;
-            border-radius: 3mm;
-            border: 1px solid #e5e7eb;
-            text-align: center;
-            max-width: 100%;
-        }
-        
-        .media-image {
-            max-width: 100%;
-            max-height: 40mm;
-            height: auto;
-            border-radius: 2mm;
-            margin-bottom: 2mm;
-            box-shadow: 0 1mm 3mm rgba(0,0,0,0.1);
-        }
-        
-        .media-qr-container {
+            max-width: 75%;
+            border: 1px solid rgba(0,0,0,0.05);
+
+            /* Important: affichage horizontal des images */
             display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 3mm;
-            margin: 2mm 0;
+            flex-wrap: wrap;
+            gap: 1mm;
         }
-        
-        .media-qr img {
-            width: 20mm;
-            height: 20mm;
-            border-radius: 2mm;
+        .message.own .message-bubble {
+            background: linear-gradient(135deg, ${settings.coverColor}, ${adjustBrightness(settings.coverColor, -8)});
+            color: white;
+            border-bottom-right-radius: 0.8mm;
         }
-        
-        .media-info {
-            text-align: left;
-            flex: 1;
+        .message:not(.own) .message-bubble {
+            background: #f8fafc;
+            color: #1f2937;
+            border-bottom-left-radius: 0.8mm;
         }
-        
-        .media-type {
-            font-size: 9pt;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 1mm;
-        }
-        
-        .media-filename {
-            font-size: 8pt;
-            color: #6b7280;
-            word-break: break-all;
-        }
-        
-        .media-instruction {
+        .sender {
             font-size: 7pt;
-            color: #9ca3af;
-            font-style: italic;
-            margin-top: 1mm;
+            color: #6b7280;
+            margin-bottom: 0.8mm;
+            font-weight: 600;
         }
-        
-        /* Préface et dédicace */
+        .message-content {
+            font-size: 9pt;
+            line-height: 1.2;
+            font-weight: 400;
+            margin-bottom: 0;
+            /* Allow message text to use full width minus images */
+            flex: 1 1 auto;
+        }
+        .timestamp {
+            font-size: 6pt;
+            opacity: 0.75;
+            margin-top: 0.8mm;
+            text-align: right;
+            font-weight: 500;
+            flex-basis: 100%;
+        }
+        .message-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1mm;
+            justify-content: flex-start;
+            align-items: center;
+        }
+        .message-image {
+            max-width: 18mm;
+            max-height: 18mm;
+            height: auto;
+            border-radius: 1.5mm;
+            object-fit: cover;
+            border: none;
+            background: transparent;
+        }
+        .media-qr {
+            display: inline-flex;
+            align-items: center;
+            gap: 1.5mm;
+            margin: 1mm 0;
+            padding: 1.5mm;
+            background: rgba(255,255,255,0.1);
+            border-radius: 1.5mm;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .message:not(.own) .media-qr {
+            background: rgba(0,0,0,0.03);
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        .media-qr img {
+            width: 12mm;
+            height: 12mm;
+            border-radius: 1mm;
+        }
+        .media-info {
+            flex: 1;
+            text-align: left;
+        }
+        .media-type {
+            font-size: 7pt;
+            font-weight: 600;
+            margin-bottom: 0.3mm;
+        }
+        .media-instruction {
+            font-size: 6pt;
+            opacity: 0.8;
+            font-style: italic;
+        }
         .preface-page, .dedication-page {
+            width: 100%;
+            background: white;
+        }
+        .preface-content-inner, .dedication-content-inner {
             padding: 20mm;
             text-align: center;
         }
-        
-        .preface-page h2, .dedication-page h2 {
-            font-size: 24pt;
-            margin: 0 0 10mm 0;
+        .preface-content-inner h2, .dedication-content-inner h2 {
+            font-size: 20pt;
+            margin: 0 0 8mm 0;
             color: #374151;
+            font-weight: 600;
         }
-        
         .preface-content, .dedication-content {
-            font-size: 12pt;
-            line-height: 1.6;
+            font-size: 11pt;
+            line-height: 1.5;
             color: #4b5563;
             max-width: 120mm;
             margin: 0 auto;
+            text-align: justify;
         }
-        
         .author-signature {
-            margin-top: 15mm;
+            margin-top: 12mm;
             font-style: italic;
             color: #6b7280;
+            font-size: 10pt;
         }
-        
-        /* Pagination */
         .page-number {
-            position: absolute;
-            bottom: 5mm;
+            position: fixed;
+            bottom: 4mm;
             right: 50%;
             transform: translateX(50%);
-            font-size: 9pt;
+            font-size: 8pt;
             color: #6b7280;
+            font-weight: 500;
+        }
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
         }
     </style>
 </head>
@@ -295,108 +330,108 @@ export const PDFExport: React.FC<PDFExportProps> = ({
         <h1>${settings.title}</h1>
         ${settings.subtitle ? `<div class="subtitle">${settings.subtitle}</div>` : ''}
         <div class="info">
-            <div>Conversation entre ${participants.join(' et ')}</div>
-            <div style="margin-top: 5mm;">${messages.length} messages</div>
-            <div>${formatDateRange(messages)}</div>
-            ${settings.authorName ? `<div style="margin-top: 10mm;">Par ${settings.authorName}</div>` : ''}
+            <div>📱 Conversation entre ${participants.join(' et ')}</div>
+            <div style="margin-top: 3mm;">💬 ${messages.length} messages échangés</div>
+            <div>📅 ${formatDateRange(messages)}</div>
+            ${settings.authorName ? `<div style="margin-top: 6mm;">✍️ Compilé par ${settings.authorName}</div>` : ''}
         </div>
     </div>
     
     ${settings.preface ? `
-    <!-- Page de préface -->
     <div class="page preface-page">
-        <h2>Préface</h2>
-        <div class="preface-content">
-            ${settings.preface.split('\n').map(p => `<p>${p}</p>`).join('')}
+        <div class="page-content">
+            <div class="preface-content-inner">
+                <h2>Préface</h2>
+                <div class="preface-content">
+                    ${settings.preface.split('\n').map(p => `<p>${p}</p>`).join('')}
+                </div>
+                ${settings.authorName ? `<div class="author-signature">${settings.authorName}</div>` : ''}
+            </div>
         </div>
-        ${settings.authorName ? `<div class="author-signature">${settings.authorName}</div>` : ''}
     </div>
     ` : ''}
     
     ${settings.dedication ? `
-    <!-- Page de dédicace -->
     <div class="page dedication-page">
-        <h2>Dédicace</h2>
-        <div class="dedication-content">
-            ${settings.dedication.split('\n').map(p => `<p><em>${p}</em></p>`).join('')}
+        <div class="page-content">
+            <div class="dedication-content-inner">
+                <h2>Dédicace</h2>
+                <div class="dedication-content">
+                    ${settings.dedication.split('\n').map(p => `<p><em>${p}</em></p>`).join('')}
+                </div>
+            </div>
         </div>
     </div>
     ` : ''}
     
     ${pages.map((page, pageIndex) => `
-    <!-- Page de contenu ${pageIndex + 1} -->
-    <div class="page content-page">
-        ${page.date && settings.showDates ? `
-            <div class="date-header">
-                <span>${new Date(page.date).toLocaleDateString('fr-FR', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}</span>
-            </div>
-        ` : ''}
-        
-        <div class="messages-container">
-            ${page.messages.map((message: WhatsAppMessage, index: number) => {
-              const isOwn = participants.length > 0 && message.sender === participants[0];
-              const previousMessage = index > 0 ? page.messages[index - 1] : null;
-              const showSender = !isOwn && (!previousMessage || previousMessage.sender !== message.sender);
-              
-              return `
-                <div class="message ${isOwn ? 'own' : ''}">
-                    <div>
-                        ${showSender ? `<div class="sender">${message.sender}</div>` : ''}
-                        <div class="message-bubble">
-                            ${message.type === 'media' && message.mediaUrl ? `
-                                <div class="media-container">
-                                    ${message.mediaType === 'image' ? `
-                                        <!-- Afficher l'image directement -->
-                                        <img src="${getPlaceholderImage('image', message.fileName || 'Image')}" 
-                                             alt="${message.fileName || 'Image'}" 
-                                             class="media-image" 
-                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
-                                        <div style="display:none; padding: 10mm; background: #e5e7eb; border-radius: 2mm;">
-                                            <div style="font-weight: bold;">📷 ${message.fileName || 'Image'}</div>
-                                            <div style="font-size: 8pt; color: #6b7280; margin-top: 2mm;">Image non disponible</div>
-                                        </div>
-                                    ` : `
-                                        <!-- QR Code pour vidéos et audios -->
-                                        <div class="media-qr-container">
-                                            <img src="${generateQRCodeUrl(message.mediaUrl)}" 
-                                                 alt="QR Code" 
-                                                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZjNmNGY2Ii8+CjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiMzNzQxNTEiLz4KPC9zdmc+'" />
-                                            <div class="media-info">
-                                                <div class="media-type">
-                                                    ${message.mediaType === 'video' ? '🎥 Vidéo' : 
-                                                      message.mediaType === 'audio' ? '🎵 Audio' : '📄 Fichier'}
-                                                </div>
-                                                ${message.fileName ? `<div class="media-filename">${message.fileName}</div>` : ''}
-                                                <div class="media-instruction">QR code pour accéder au fichier</div>
-                                            </div>
-                                        </div>
-                                    `}
-                                </div>
-                                ${message.content ? `<div class="message-content">${message.content.replace(/\n/g, '<br>')}</div>` : ''}
-                            ` : `
-                                <div class="message-content">${message.content.replace(/\n/g, '<br>')}</div>
-                            `}
-                            ${settings.showTimestamps ? `
-                                <div class="timestamp">
-                                    ${message.timestamp.toLocaleTimeString('fr-FR', {
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    })}
-                                </div>
-                            ` : ''}
-                        </div>
+    <div class="page">
+        <div class="page-content">
+            <div class="content-page-inner">
+                ${page.date && settings.showDates ? `
+                    <div class="date-header">
+                        <span>${new Date(page.date).toLocaleDateString('fr-FR', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}</span>
                     </div>
+                ` : ''}
+                
+                <div class="messages-container">
+                    ${page.messages.map((message: WhatsAppMessage, index: number) => {
+                      const isOwn = participants.length > 0 && message.sender === participants[0];
+                      const previousMessage = index > 0 ? page.messages[index - 1] : null;
+                      const showSender = !isOwn && (!previousMessage || previousMessage.sender !== message.sender);
+                      
+                      return `
+                        <div class="message ${isOwn ? 'own' : ''}">
+                            <div>
+                                ${showSender ? `<div class="sender">${message.sender}</div>` : ''}
+                                <div class="message-bubble">
+                                    ${message.content ? `<div class="message-content">${message.content.replace(/\n/g, '<br>')}</div>` : ''}
+                                    
+                                    ${message.type === 'media' && message.fileName ? `
+                                        ${message.mediaType === 'image' && imageBase64Map.has(message.mediaUrl || '') ? `
+                                            <div class="message-images">
+                                                <img src="${imageBase64Map.get(message.mediaUrl || '') || ''}" 
+                                                     alt="Image" 
+                                                     class="message-image" />
+                                            </div>
+                                        ` : `
+                                            <div class="media-qr">
+                                                <img src="${generateFileInfoQR(message.fileName, message.mediaType || 'document')}" 
+                                                     alt="QR Code Fichier" />
+                                                <div class="media-info">
+                                                    <div class="media-type">
+                                                        ${message.mediaType === 'video' ? '🎥 Vidéo' : 
+                                                          message.mediaType === 'audio' ? '🎵 Audio' : '📄 Fichier'}
+                                                    </div>
+                                                    <div class="media-instruction">Infos scannables</div>
+                                                </div>
+                                            </div>
+                                        `}
+                                    ` : ''}
+                                    
+                                    ${settings.showTimestamps ? `
+                                        <div class="timestamp">
+                                            ${message.timestamp.toLocaleTimeString('fr-FR', {
+                                              hour: '2-digit',
+                                              minute: '2-digit'
+                                            })}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                      `;
+                    }).join('')}
                 </div>
-              `;
-            }).join('')}
+                
+                <div class="page-number">${pageIndex + (settings.preface ? 2 : 1) + (settings.dedication ? 1 : 0)}</div>
+            </div>
         </div>
-        
-        <div class="page-number">${pageIndex + (settings.preface ? 2 : 1) + (settings.dedication ? 1 : 0)}</div>
     </div>
     `).join('')}
 </body>
@@ -407,25 +442,24 @@ export const PDFExport: React.FC<PDFExportProps> = ({
   const exportToPDF = async () => {
     setIsExporting(true);
     try {
-      const htmlContent = generatePDFContent();
+      const htmlContent = await generatePDFContent();
       const blob = new Blob([htmlContent], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       
-      // Ouvrir dans une nouvelle fenêtre pour impression/sauvegarde PDF
       const printWindow = window.open(url, '_blank');
       if (printWindow) {
         printWindow.onload = () => {
           setTimeout(() => {
             printWindow.print();
-          }, 1000);
+          }, 2000);
         };
       }
       
       URL.revokeObjectURL(url);
       
       toast({
-        title: "PDF généré !",
-        description: "Utilisez Ctrl+P pour sauvegarder en PDF dans la nouvelle fenêtre",
+        title: "PDF livre généré !",
+        description: "Format livre centré avec QR codes fonctionnels",
       });
     } catch (error) {
       toast({
@@ -443,73 +477,74 @@ export const PDFExport: React.FC<PDFExportProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="w-5 h-5" />
-          Export PDF Professionnel
+          Export PDF Format Livre
         </CardTitle>
         <CardDescription>
-          Générez un PDF haute qualité avec images intégrées et QR codes pour les médias
+          PDF optimisé format livre centré avec QR codes fonctionnels
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-blue-800 mb-2">✨ Améliorations des médias :</h4>
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 className="font-semibold text-blue-800 mb-2">📖 Format Livre Amélioré :</h4>
             <ul className="text-sm text-blue-700 space-y-1">
-              <li>• 📷 Images placeholder avec noms de fichiers</li>
-              <li>• 🎥 QR codes pour vidéos avec accès direct</li>
-              <li>• 🎵 QR codes pour fichiers audio</li>
-              <li>• Format A4 professionnel avec pagination</li>
-              <li>• 20 messages par page pour un meilleur rendu</li>
-              <li>• Détection automatique des fichiers attachés</li>
+              <li>• 📏 Contenu centré avec marges 1/6 de chaque côté</li>
+              <li>• 📸 Images côte à côte sans fond blanc</li>
+              <li>• 🔗 QR codes fonctionnels avec URLs scannables</li>
+              <li>• 💬 Messages sur toute la largeur disponible</li>
+              <li>• ⚡ Espacement optimisé entre messages</li>
             </ul>
           </div>
 
           <Button 
             onClick={exportToPDF}
             disabled={isExporting}
-            className="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700"
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
           >
             {isExporting ? (
               <div className="flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Génération en cours...
+                Génération du livre PDF...
               </div>
             ) : (
               <div className="flex items-center gap-2">
                 <Download className="w-4 h-4" />
-                Générer le PDF avec médias
+                Générer PDF Format Livre
               </div>
             )}
           </Button>
-          
-          <p className="text-xs text-gray-600 text-center">
-            Le PDF s'ouvrira dans une nouvelle fenêtre. Utilisez Ctrl+P puis "Enregistrer en PDF" pour le sauvegarder.
-          </p>
         </div>
       </CardContent>
     </Card>
   );
 };
 
-const adjustBrightness = (color: string, percent: number) => {
-  const num = parseInt(color.replace("#", ""), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = (num >> 16) + amt;
-  const G = (num >> 8 & 0x00FF) + amt;
-  const B = (num & 0x0000FF) + amt;
-  return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
-    (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
-    (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
-};
+// Fonction utilitaire pour ajuster la luminosité d’une couleur HEX
+function adjustBrightness(hex: string, amount: number) {
+  let col = hex;
+  if (col[0] === '#') {
+    col = col.slice(1);
+  }
+  const num = parseInt(col, 16);
+  let r = (num >> 16) + amount;
+  let g = ((num >> 8) & 0x00FF) + amount;
+  let b = (num & 0x0000FF) + amount;
 
-const formatDateRange = (messages: WhatsAppMessage[]) => {
-  if (messages.length === 0) return '';
-  
+  r = Math.min(255, Math.max(0, r));
+  g = Math.min(255, Math.max(0, g));
+  b = Math.min(255, Math.max(0, b));
+
+  return `#${(r << 16 | g << 8 | b).toString(16).padStart(6, '0')}`;
+}
+
+// Format plage de date (de - à) pour la couverture
+function formatDateRange(messages: WhatsAppMessage[]) {
+  if (!messages.length) return '';
   const firstDate = messages[0].timestamp;
   const lastDate = messages[messages.length - 1].timestamp;
-  
   if (firstDate.toDateString() === lastDate.toDateString()) {
     return firstDate.toLocaleDateString('fr-FR');
+  } else {
+    return `${firstDate.toLocaleDateString('fr-FR')} - ${lastDate.toLocaleDateString('fr-FR')}`;
   }
-  
-  return `Du ${firstDate.toLocaleDateString('fr-FR')} au ${lastDate.toLocaleDateString('fr-FR')}`;
-};
+}

@@ -24,7 +24,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const showTimeGap = timeDiff > 300000; // 5 minutes
 
   return (
-    <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${showTimeGap ? 'mt-6' : ''}`}>
+    <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${showTimeGap ? 'mt-3' : 'mt-1'}`}>
       <div className={`max-w-xs lg:max-w-md ${isOwn ? 'order-2' : 'order-1'}`}>
         {/* Nom de l'expéditeur */}
         {!isOwn && showSender && (
@@ -36,7 +36,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         {/* Bulle de message */}
         <div
           className={`
-            relative px-4 py-2 rounded-2xl shadow-sm
+            relative px-3 py-2 rounded-2xl shadow-sm
             ${isOwn 
               ? 'bg-green-500 text-white rounded-br-md' 
               : 'bg-white text-gray-800 rounded-bl-md border border-gray-200'
@@ -46,20 +46,22 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         >
           {/* Contenu du message */}
           {message.type === 'media' && message.mediaUrl ? (
-            <div className="space-y-2">
-              <MediaDisplay 
-                mediaUrl={message.mediaUrl}
-                mediaType={message.mediaType || 'image'}
-                fileName={message.fileName}
-              />
+            <div className="space-y-1">
+              <div className="flex flex-wrap">
+                <MediaDisplay 
+                  mediaUrl={message.mediaUrl}
+                  mediaType={message.mediaType || 'image'}
+                  fileName={message.fileName}
+                />
+              </div>
               {message.content && (
-                <div className="whitespace-pre-wrap break-words">
+                <div className="whitespace-pre-wrap break-words text-sm">
                   {message.content}
                 </div>
               )}
             </div>
           ) : (
-            <div className="whitespace-pre-wrap break-words">
+            <div className="whitespace-pre-wrap break-words text-sm">
               {message.content}
             </div>
           )}
