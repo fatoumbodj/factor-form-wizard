@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Image, Video, QrCode, Music, FileText, ExternalLink } from 'lucide-react';
+import { Image, Video, QrCode, Music, FileText, ExternalLink, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -19,17 +19,19 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
 }) => {
   const [imageError, setImageError] = useState(false);
 
-  // Générer QR code avec informations utiles et scannables
-  const generateFileInfoQR = () => {
+  // Générer QR code avec URL cliquable
+  const generateFunctionalQR = () => {
     const currentDate = new Date().toLocaleDateString('fr-FR');
-    const fileInfo = `📱 Fichier WhatsApp
-📄 Nom: ${fileName || 'fichier-media'}
-🎯 Type: ${mediaType}
-📅 Extrait le: ${currentDate}
-💬 Source: Conversation WhatsApp
-ℹ️ Fichier multimédia sauvegardé`;
+    const fileInfo = {
+      type: mediaType,
+      name: fileName || 'media-whatsapp',
+      date: currentDate,
+      url: mediaUrl || 'https://whatsapp.com'
+    };
     
-    return `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(fileInfo)}&bgcolor=ffffff&color=000000&margin=1`;
+    // Créer une URL de données JSON que le QR code peut encoder
+    const dataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(mediaUrl || `https://wa.me/?text=Fichier ${mediaType}: ${fileName}`)}&bgcolor=ffffff&color=000000&margin=2`;
+    return dataUrl;
   };
 
   console.log('🖼️ Affichage média:', { mediaType, fileName, mediaUrl: mediaUrl ? 'disponible' : 'manquant' });
@@ -67,7 +69,7 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
       case 'video':
         return (
           <div className={`inline-block bg-purple-50 rounded-lg p-3 border border-purple-200 mr-1 mb-1 max-w-xs ${className}`}>
-            <div className="flex items-start gap-2 mb-2">
+            <div className="flex items-start gap-2 mb-3">
               <div className="bg-purple-500 p-1 rounded">
                 <Video className="w-4 h-4 text-white" />
               </div>
@@ -77,18 +79,45 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
               </div>
             </div>
             
+            {mediaUrl ? (
+              <div className="mb-3">
+                <video 
+                  className="w-full max-w-xs rounded border"
+                  controls
+                  preload="metadata"
+                  style={{ maxHeight: '200px' }}
+                >
+                  <source src={mediaUrl} type="video/mp4" />
+                  <source src={mediaUrl} type="video/webm" />
+                  <source src={mediaUrl} type="video/ogg" />
+                  Votre navigateur ne supporte pas la lecture vidéo.
+                </video>
+              </div>
+            ) : (
+              <div className="mb-3 bg-gray-100 rounded flex items-center justify-center h-24">
+                <Play className="w-8 h-8 text-gray-400" />
+              </div>
+            )}
+            
             <div className="flex items-center gap-2 bg-white p-2 rounded">
-              <img 
-                src={generateFileInfoQR()} 
-                alt="QR Code vidéo"
-                className="w-12 h-12 border border-gray-200 rounded"
-              />
+              <a 
+                href={mediaUrl || `https://wa.me/?text=Vidéo: ${fileName}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block"
+              >
+                <img 
+                  src={generateFunctionalQR()} 
+                  alt="QR Code vidéo"
+                  className="w-12 h-12 border border-gray-200 rounded cursor-pointer hover:opacity-80"
+                />
+              </a>
               <div className="flex-1">
                 <p className="text-xs font-medium flex items-center gap-1">
                   <QrCode className="w-3 h-3" />
-                  Info vidéo
+                  Lien vidéo
                 </p>
-                <p className="text-xs text-gray-600">Scannable</p>
+                <p className="text-xs text-gray-600">Cliquez pour ouvrir</p>
               </div>
             </div>
           </div>
@@ -118,13 +147,20 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
               </audio>
               
               <div className="flex items-center gap-2 bg-white p-2 rounded">
-                <img 
-                  src={generateFileInfoQR()} 
-                  alt="QR Code audio"
-                  className="w-10 h-10 border border-gray-200 rounded"
-                />
+                <a 
+                  href={mediaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                >
+                  <img 
+                    src={generateFunctionalQR()} 
+                    alt="QR Code audio"
+                    className="w-10 h-10 border border-gray-200 rounded cursor-pointer hover:opacity-80"
+                  />
+                </a>
                 <div className="flex-1">
-                  <p className="text-xs text-gray-600">Info audio scannable</p>
+                  <p className="text-xs text-gray-600">Lien audio scannable</p>
                 </div>
               </div>
             </div>
@@ -163,24 +199,31 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
                 >
                   <ExternalLink className="w-4 h-4 text-blue-600" />
                   <div className="flex-1">
-                    <p className="text-xs font-medium">Ouvrir</p>
+                    <p className="text-xs font-medium">Ouvrir le document</p>
                   </div>
                 </a>
                 
                 <div className="flex items-center gap-2 bg-white p-2 rounded">
-                  <img 
-                    src={generateFileInfoQR()} 
-                    alt="QR Code document"
-                    className="w-10 h-10 border border-gray-200 rounded"
-                  />
+                  <a 
+                    href={mediaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    <img 
+                      src={generateFunctionalQR()} 
+                      alt="QR Code document"
+                      className="w-10 h-10 border border-gray-200 rounded cursor-pointer hover:opacity-80"
+                    />
+                  </a>
                   <div className="flex-1">
-                    <p className="text-xs text-gray-600">Info document</p>
+                    <p className="text-xs text-gray-600">Lien document</p>
                   </div>
                 </div>
               </>
             ) : (
               <div className="bg-white p-2 rounded">
-                <p className="text-xs text-gray-600">Non disponible</p>
+                <p className="text-xs text-gray-600">Document non disponible</p>
               </div>
             )}
           </div>
