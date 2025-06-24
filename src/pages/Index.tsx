@@ -1,106 +1,126 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { BookPreSettings } from '../components/BookPreSettings';
+import { UniversalImport } from '../components/UniversalImport';
+import { ChatBook } from '../components/ChatBook';
+import { BookHeader } from '../components/BookHeader';
+import { WhatsAppMessage, BookSettings } from '../types/Message';
+
+type AppStep = 'settings' | 'import' | 'book';
 
 const Index = () => {
-  const [formData, setFormData] = useState({});
+  const [currentStep, setCurrentStep] = useState<AppStep>('settings');
+  const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
+  const [participants, setParticipants] = useState<string[]>([]);
+  const [bookSettings, setBookSettings] = useState<BookSettings>({
+    title: 'Notre Conversation',
+    coverColor: '#10b981',
+    fontFamily: 'Inter',
+    showTimestamps: true,
+    showDates: true
+  });
 
-  // Données de test pour simuler vos critères
-  const testCriteria = [
-    {
-      code: 'nom',
-      description: 'Nom',
-      type: 'text'
-    },
-    {
-      code: 'age',
-      description: 'Âge',
-      type: 'select',
-      referentialValues: [
-        { value: '18-25', label: '18-25 ans' },
-        { value: '26-35', label: '26-35 ans' },
-        { value: '36-45', label: '36-45 ans' },
-        { value: '46+', label: '46+ ans' }
-      ]
-    },
-    {
-      code: 'email',
-      description: 'Email',
-      type: 'text'
-    }
-  ];
-
-  const handleInputChange = (code: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [code]: value
-    }));
+  const handleMessagesImported = (importedMessages: WhatsAppMessage[], detectedParticipants: string[]) => {
+    setMessages(importedMessages);
+    setParticipants(detectedParticipants);
+    setCurrentStep('book');
   };
 
-  const renderField = (criteria: any) => {
-    if (criteria.type === 'select' && criteria.referentialValues) {
-      return (
-        <div key={criteria.code} className="mb-4">
-          <label className="block text-sm font-medium mb-2">
-            {criteria.description}
-          </label>
-          <Select
-            value={formData[criteria.code] || ""}
-            onValueChange={(value) => handleInputChange(criteria.code, value)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Sélectionnez une option" />
-            </SelectTrigger>
-            <SelectContent>
-              {criteria.referentialValues.map((option: any) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      );
-    }
+  const handleReset = () => {
+    setMessages([]);
+    setParticipants([]);
+    setCurrentStep('settings');
+  };
 
-    return (
-      <div key={criteria.code} className="mb-4">
-        <label className="block text-sm font-medium mb-2">
-          {criteria.description}
-        </label>
-        <Input
-          type="text"
-          placeholder={`Saisissez ${criteria.description.toLowerCase()}`}
-          value={formData[criteria.code] || ""}
-          onChange={(e) => handleInputChange(criteria.code, e.target.value)}
-        />
-      </div>
-    );
+  const handleContinueToImport = () => {
+    setCurrentStep('import');
+  };
+
+  const handleBackToSettings = () => {
+    setCurrentStep('settings');
+  };
+
+  const renderCurrentStep = () => {
+    switch (currentStep) {
+      case 'settings':
+        return (
+          <BookPreSettings
+            settings={bookSettings}
+            onSettingsChange={setBookSettings}
+            onContinue={handleContinueToImport}
+          />
+        );
+      
+      case 'import':
+        return (
+          <div className="space-y-6">
+            <div className="text-center">
+              <button 
+                onClick={handleBackToSettings}
+                className="text-blue-600 hover:text-blue-800 underline mb-4"
+              >
+                ← Retour aux paramètres
+              </button>
+            </div>
+            <UniversalImport onMessagesImported={handleMessagesImported} />
+          </div>
+        );
+      
+      case 'book':
+        return (
+          <ChatBook 
+            messages={messages} 
+            title={bookSettings.title}
+            participants={participants}
+            onReset={handleReset}
+            settings={bookSettings}
+            onSettingsChange={setBookSettings}
+          />
+        );
+      
+      default:
+        return null;
+    }
+  };
+
+  const getStepClasses = (step: AppStep) => {
+    return `flex items-center gap-2 px-4 py-2 rounded-full ${
+      currentStep === step ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
+    }`;
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>Formulaire Dynamique</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-4">
-              {testCriteria.map(criteria => renderField(criteria))}
-            </form>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header avec navigation */}
+        {currentStep !== 'book' && (
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-gray-800 mb-4">
+              📚 Créateur de Livre Souvenir
+            </h1>
+            <p className="text-xl text-gray-600 mb-8">
+              Transformez vos conversations en magnifiques livres PDF
+            </p>
             
-            {/* Affichage des données pour debug */}
-            <div className="mt-6 p-4 bg-gray-100 rounded">
-              <h3 className="font-medium mb-2">Données du formulaire :</h3>
-              <pre className="text-sm">
-                {JSON.stringify(formData, null, 2)}
-              </pre>
+            {/* Indicateur d'étapes */}
+            <div className="flex justify-center items-center gap-4 mb-8">
+              <div className={getStepClasses('settings')}>
+                <span className="text-sm font-medium">1. Paramètres</span>
+              </div>
+              <div className="w-8 h-0.5 bg-gray-300"></div>
+              <div className={getStepClasses('import')}>
+                <span className="text-sm font-medium">2. Import</span>
+              </div>
+              <div className="w-8 h-0.5 bg-gray-300"></div>
+              <div className={getStepClasses('book')}>
+                <span className="text-sm font-medium">3. Livre</span>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
+
+        {/* Contenu selon l'étape */}
+        {renderCurrentStep()}
       </div>
     </div>
   );
