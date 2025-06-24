@@ -43,7 +43,7 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
               <img 
                 src={mediaUrl}
                 alt={fileName || 'Image'}
-                className="w-20 h-20 object-cover rounded-lg shadow-sm border border-gray-100 mr-2 mb-2"
+                className="w-20 h-20 object-cover rounded-lg shadow-sm border border-gray-100 mr-1 mb-1"
                 onError={() => {
                   console.log('❌ Erreur de chargement image:', mediaUrl);
                   setImageError(true);
@@ -55,7 +55,7 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
           );
         } else {
           return (
-            <div className={`inline-block bg-gray-100 rounded-lg p-2 border mr-2 mb-2 ${className}`}>
+            <div className={`inline-block bg-gray-100 rounded-lg p-2 border mr-1 mb-1 ${className}`}>
               <div className="flex items-center gap-2">
                 <Image className="w-4 h-4 text-gray-500" />
                 <span className="text-xs text-gray-600">Image</span>
@@ -66,7 +66,7 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
       
       case 'video':
         return (
-          <div className={`inline-block bg-purple-50 rounded-lg p-3 border border-purple-200 mr-2 mb-2 max-w-xs ${className}`}>
+          <div className={`inline-block bg-purple-50 rounded-lg p-3 border border-purple-200 mr-1 mb-1 max-w-xs ${className}`}>
             <div className="flex items-start gap-2 mb-2">
               <div className="bg-purple-500 p-1 rounded">
                 <Video className="w-4 h-4 text-white" />
@@ -97,7 +97,7 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
       case 'audio':
         if (mediaUrl) {
           return (
-            <div className={`inline-block bg-green-50 rounded-lg p-3 border border-green-200 mr-2 mb-2 max-w-xs ${className}`}>
+            <div className={`inline-block bg-green-50 rounded-lg p-3 border border-green-200 mr-1 mb-1 max-w-xs ${className}`}>
               <div className="flex items-start gap-2 mb-2">
                 <div className="bg-green-500 p-1 rounded">
                   <Music className="w-4 h-4 text-white" />
@@ -131,7 +131,7 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
           );
         } else {
           return (
-            <div className={`inline-block bg-green-50 rounded-lg p-2 border border-green-200 mr-2 mb-2 ${className}`}>
+            <div className={`inline-block bg-green-50 rounded-lg p-2 border border-green-200 mr-1 mb-1 ${className}`}>
               <div className="flex items-center gap-2">
                 <Music className="w-4 h-4 text-green-500" />
                 <span className="text-xs text-green-700">Audio</span>
@@ -142,7 +142,7 @@ export const MediaDisplay: React.FC<MediaDisplayProps> = ({
       
       default:
         return (
-          <div className={`inline-block bg-gray-50 rounded-lg p-3 border border-gray-200 mr-2 mb-2 max-w-xs ${className}`}>
+          <div className={`inline-block bg-gray-50 rounded-lg p-3 border border-gray-200 mr-1 mb-1 max-w-xs ${className}`}>
             <div className="flex items-start gap-2 mb-2">
               <div className="bg-gray-500 p-1 rounded">
                 <FileText className="w-4 h-4 text-white" />
