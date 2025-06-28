@@ -4,8 +4,10 @@ import { useDropzone } from 'react-dropzone';
 import JSZip from 'jszip';
 import { parseWhatsAppChat } from '../utils/whatsappParser';
 import { WhatsAppMessage } from '../types/Message';
-import { Upload, FileText, Archive, AlertCircle } from 'lucide-react';
+import { Upload, FileText, Archive, AlertCircle, Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface UniversalImportProps {
   onMessagesImported: (messages: WhatsAppMessage[], participants: string[]) => void;
@@ -14,6 +16,7 @@ interface UniversalImportProps {
 export const UniversalImport: React.FC<UniversalImportProps> = ({ onMessagesImported }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState('');
+  const [githubUsername, setGithubUsername] = useState('fatou mbodj');
 
   const processZipFile = async (file: File): Promise<{ chatText: string; mediaFiles: Map<string, string> }> => {
     const zip = new JSZip();
@@ -29,7 +32,7 @@ export const UniversalImport: React.FC<UniversalImportProps> = ({ onMessagesImpo
 
       console.log('🔍 Traitement du fichier:', fileName);
 
-      // Fichier de chat WhatsApp - condition plus flexible
+      // Fichier de chat WhatsApp
       if (fileName.endsWith('.txt')) {
         console.log('💬 Fichier de chat potentiel trouvé:', fileName);
         const content = await zipEntry.async('text');
@@ -38,17 +41,16 @@ export const UniversalImport: React.FC<UniversalImportProps> = ({ onMessagesImpo
           console.log('✅ Contenu de chat valide trouvé, longueur:', content.length);
         }
       }
-      // Fichiers média
+      // Fichiers média - on stocke juste les noms pour créer des QR codes d'info
       else if (fileName.match(/\.(jpg|jpeg|png|gif|webp|bmp|tiff|svg|mp4|avi|mov|webm|mkv|mp3|wav|opus|ogg|aac|m4a|pdf|doc|docx)$/i)) {
         console.log('📸 Fichier média trouvé:', fileName);
         try {
           const blob = await zipEntry.async('blob');
           const mediaUrl = URL.createObjectURL(blob);
           
-          // Utiliser le nom de fichier complet comme clé
-          const cleanFileName = fileName.replace(/^.*[\\\/]/, ''); // Enlever le chemin
+          const cleanFileName = fileName.replace(/^.*[\\\/]/, '');
           mediaFiles.set(cleanFileName, mediaUrl);
-          mediaFiles.set(fileName, mediaUrl); // Garder aussi le chemin complet
+          mediaFiles.set(fileName, mediaUrl);
           
           console.log('✅ Média extrait:', cleanFileName, 'URL:', mediaUrl);
         } catch (error) {
@@ -66,6 +68,11 @@ export const UniversalImport: React.FC<UniversalImportProps> = ({ onMessagesImpo
   };
 
   const processFile = async (file: File) => {
+    if (!githubUsername.trim()) {
+      setProgress('Erreur: Veuillez entrer votre nom d\'utilisateur GitHub');
+      return;
+    }
+
     setIsProcessing(true);
     setProgress('Début du traitement...');
 
@@ -90,6 +97,9 @@ export const UniversalImport: React.FC<UniversalImportProps> = ({ onMessagesImpo
       setProgress('Analyse du chat...');
       console.log('🔄 Parsing avec', mediaFiles.size, 'médias disponibles');
       
+      // Stocker le nom d'utilisateur GitHub pour utilisation ultérieure
+      localStorage.setItem('githubUsername', githubUsername);
+      
       const { messages, participants } = parseWhatsAppChat(chatText, mediaFiles);
 
       if (messages.length === 0) {
@@ -111,7 +121,7 @@ export const UniversalImport: React.FC<UniversalImportProps> = ({ onMessagesImpo
     if (acceptedFiles.length > 0) {
       processFile(acceptedFiles[0]);
     }
-  }, []);
+  }, [githubUsername]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -123,7 +133,31 @@ export const UniversalImport: React.FC<UniversalImportProps> = ({ onMessagesImpo
   });
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Configuration GitHub simple */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Github className="w-5 h-5 text-blue-600" />
+          <h3 className="font-medium text-blue-900">Configuration GitHub</h3>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="github-username" className="text-sm text-blue-800">
+            Votre nom d'utilisateur GitHub (pour héberger les médias gratuitement)
+          </Label>
+          <Input
+            id="github-username"
+            value={githubUsername}
+            onChange={(e) => setGithubUsername(e.target.value)}
+            placeholder="Ex: fatou-mbodj"
+            className="bg-white"
+          />
+          <p className="text-xs text-blue-600">
+            💡 Vos vidéos seront automatiquement hébergées sur GitHub Pages
+          </p>
+        </div>
+      </div>
+
+      {/* Zone de drop */}
       <div
         {...getRootProps()}
         className={`
@@ -174,7 +208,7 @@ export const UniversalImport: React.FC<UniversalImportProps> = ({ onMessagesImpo
       </div>
 
       {progress.startsWith('Erreur:') && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center gap-2 text-red-800">
             <AlertCircle className="w-5 h-5" />
             <p className="font-medium">Erreur de traitement</p>

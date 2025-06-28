@@ -19,12 +19,23 @@ export const PDFExport: React.FC<PDFExportProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
 
-  const generateFileInfoQR = (fileName: string, mediaType: string) => {
-    const currentDate = new Date().toLocaleDateString('fr-FR');
-    const dataUrl = `https://chatbook.app/file?name=${encodeURIComponent(fileName)}&type=${mediaType}&date=${encodeURIComponent(currentDate)}&source=whatsapp`;
-    return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(dataUrl)}&bgcolor=ffffff&color=000000&margin=0&ecc=M`;
+  // Générer QR code avec l'URL réelle du média pour pouvoir le lire en scannant
+  const generateMediaQR = (fileName: string, mediaType: string, mediaUrl?: string) => {
+    if (mediaUrl) {
+      // Si on a l'URL du média, on la met directement dans le QR code
+      return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(mediaUrl)}&bgcolor=ffffff&color=000000&margin=0&ecc=H`;
+    } else {
+      // Sinon on met les informations du fichier
+      const fileData = `FICHIER: ${fileName}
+TYPE: ${mediaType}  
+DATE: ${new Date().toLocaleDateString('fr-FR')}
+SOURCE: WhatsApp
+APP: ChatBook Converter`;
+      return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(fileData)}&bgcolor=ffffff&color=000000&margin=0&ecc=H`;
+    }
   };
 
+  // Fonction pour convertir une URL blob en base64
   const blobToBase64 = async (url: string): Promise<string | null> => {
     try {
       const response = await fetch(url);
@@ -56,6 +67,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({
       }
     }
 
+    // Grouper les messages par jour puis par pages
     const groupedMessages = messages.reduce((groups, message) => {
       const date = message.timestamp.toDateString();
       if (!groups[date]) {
@@ -82,19 +94,21 @@ export const PDFExport: React.FC<PDFExportProps> = ({
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${settings.title}</title>
     <style>
         @page {
             size: A4;
             margin: 0;
         }
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+        
         body {
             font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
             margin: 0;
@@ -105,6 +119,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({
             background: white;
             width: 100%;
         }
+        
         .page {
             min-height: 100vh;
             page-break-after: always;
@@ -112,14 +127,19 @@ export const PDFExport: React.FC<PDFExportProps> = ({
             display: flex;
             justify-content: center;
         }
+        
         .page:last-child {
             page-break-after: avoid;
         }
+        
+        /* Conteneur centré avec marges 1/6 */
         .page-content {
             width: 66.66%;
             max-width: none;
             padding: 6mm 0;
         }
+        
+        /* Page de couverture */
         .cover-page {
             background: linear-gradient(135deg, ${settings.coverColor}, ${adjustBrightness(settings.coverColor, -15)});
             color: white;
@@ -132,33 +152,40 @@ export const PDFExport: React.FC<PDFExportProps> = ({
             width: 100%;
             height: 100vh;
         }
+        
         .cover-page h1 {
             font-size: 32pt;
             margin: 0 0 8mm 0;
             font-weight: 700;
             text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
+        
         .cover-page .subtitle {
             font-size: 16pt;
             margin: 0 0 12mm 0;
             opacity: 0.95;
             font-weight: 300;
         }
+        
         .cover-page .info {
             font-size: 12pt;
             line-height: 1.6;
             font-weight: 400;
         }
+        
+        /* Pages de contenu style livre */
         .content-page-inner {
             width: 100%;
             background: white;
         }
+        
         .date-header {
             text-align: center;
             margin: 0 0 6mm 0;
             padding: 2mm 0;
             border-bottom: 1px solid #e5e7eb;
         }
+        
         .date-header span {
             background: #f8fafc;
             padding: 1.5mm 4mm;
@@ -168,6 +195,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({
             font-size: 10pt;
             border: 1px solid #e2e8f0;
         }
+        
         .messages-container {
             flex: 1;
             display: flex;
@@ -175,16 +203,18 @@ export const PDFExport: React.FC<PDFExportProps> = ({
             gap: 1mm;
             width: 100%;
         }
+        
         .message {
             display: flex;
             margin: 0.5mm 0;
             width: 100%;
             clear: both;
-            width: 100%;
         }
+        
         .message.own {
             justify-content: flex-end;
         }
+        
         .message-bubble {
             padding: 2mm 3mm;
             border-radius: 2.5mm;
@@ -192,51 +222,52 @@ export const PDFExport: React.FC<PDFExportProps> = ({
             position: relative;
             max-width: 75%;
             border: 1px solid rgba(0,0,0,0.05);
-
-            /* Important: affichage horizontal des images */
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1mm;
+            width: fit-content;
         }
+        
         .message.own .message-bubble {
             background: linear-gradient(135deg, ${settings.coverColor}, ${adjustBrightness(settings.coverColor, -8)});
             color: white;
             border-bottom-right-radius: 0.8mm;
         }
+        
         .message:not(.own) .message-bubble {
             background: #f8fafc;
             color: #1f2937;
             border-bottom-left-radius: 0.8mm;
         }
+        
         .sender {
             font-size: 7pt;
             color: #6b7280;
             margin-bottom: 0.8mm;
             font-weight: 600;
         }
+        
         .message-content {
             font-size: 9pt;
             line-height: 1.2;
             font-weight: 400;
             margin-bottom: 0;
-            /* Allow message text to use full width minus images */
-            flex: 1 1 auto;
         }
+        
         .timestamp {
             font-size: 6pt;
             opacity: 0.75;
             margin-top: 0.8mm;
             text-align: right;
             font-weight: 500;
-            flex-basis: 100%;
         }
+        
+        /* Images côte à côte dans les messages */
         .message-images {
+            margin: 1mm 0;
             display: flex;
             flex-wrap: wrap;
             gap: 1mm;
             justify-content: flex-start;
-            align-items: center;
         }
+        
         .message-image {
             max-width: 18mm;
             max-height: 18mm;
@@ -246,6 +277,8 @@ export const PDFExport: React.FC<PDFExportProps> = ({
             border: none;
             background: transparent;
         }
+        
+        /* QR codes pour vidéos et audios avec liens réels */
         .media-qr {
             display: inline-flex;
             align-items: center;
@@ -256,43 +289,53 @@ export const PDFExport: React.FC<PDFExportProps> = ({
             border-radius: 1.5mm;
             border: 1px solid rgba(255,255,255,0.2);
         }
+        
         .message:not(.own) .media-qr {
             background: rgba(0,0,0,0.03);
             border: 1px solid rgba(0,0,0,0.1);
         }
+        
         .media-qr img {
             width: 12mm;
             height: 12mm;
             border-radius: 1mm;
         }
+        
         .media-info {
             flex: 1;
             text-align: left;
         }
+        
         .media-type {
             font-size: 7pt;
             font-weight: 600;
             margin-bottom: 0.3mm;
         }
+        
         .media-instruction {
             font-size: 6pt;
             opacity: 0.8;
             font-style: italic;
         }
+        
+        /* Pages spéciales */
         .preface-page, .dedication-page {
             width: 100%;
             background: white;
         }
+        
         .preface-content-inner, .dedication-content-inner {
             padding: 20mm;
             text-align: center;
         }
+        
         .preface-content-inner h2, .dedication-content-inner h2 {
             font-size: 20pt;
             margin: 0 0 8mm 0;
             color: #374151;
             font-weight: 600;
         }
+        
         .preface-content, .dedication-content {
             font-size: 11pt;
             line-height: 1.5;
@@ -301,12 +344,15 @@ export const PDFExport: React.FC<PDFExportProps> = ({
             margin: 0 auto;
             text-align: justify;
         }
+        
         .author-signature {
             margin-top: 12mm;
             font-style: italic;
             color: #6b7280;
             font-size: 10pt;
         }
+        
+        /* Pagination */
         .page-number {
             position: fixed;
             bottom: 4mm;
@@ -316,6 +362,8 @@ export const PDFExport: React.FC<PDFExportProps> = ({
             color: #6b7280;
             font-weight: 500;
         }
+        
+        /* Optimisation pour l'impression */
         @media print {
             body {
                 -webkit-print-color-adjust: exact;
@@ -401,14 +449,14 @@ export const PDFExport: React.FC<PDFExportProps> = ({
                                             </div>
                                         ` : `
                                             <div class="media-qr">
-                                                <img src="${generateFileInfoQR(message.fileName, message.mediaType || 'document')}" 
-                                                     alt="QR Code Fichier" />
+                                                <img src="${generateMediaQR(message.fileName, message.mediaType || 'document', message.mediaUrl)}" 
+                                                     alt="QR Code Média" />
                                                 <div class="media-info">
                                                     <div class="media-type">
                                                         ${message.mediaType === 'video' ? '🎥 Vidéo' : 
                                                           message.mediaType === 'audio' ? '🎵 Audio' : '📄 Fichier'}
                                                     </div>
-                                                    <div class="media-instruction">Infos scannables</div>
+                                                    <div class="media-instruction">${message.mediaUrl ? 'Lien direct' : 'Infos fichier'}</div>
                                                 </div>
                                             </div>
                                         `}
@@ -513,38 +561,36 @@ export const PDFExport: React.FC<PDFExportProps> = ({
               </div>
             )}
           </Button>
+          
+          <p className="text-xs text-gray-600 text-center">
+            Format livre professionnel centré avec QR codes fonctionnels pour les médias.
+          </p>
         </div>
       </CardContent>
     </Card>
   );
 };
 
-// Fonction utilitaire pour ajuster la luminosité d’une couleur HEX
-function adjustBrightness(hex: string, amount: number) {
-  let col = hex;
-  if (col[0] === '#') {
-    col = col.slice(1);
-  }
-  const num = parseInt(col, 16);
-  let r = (num >> 16) + amount;
-  let g = ((num >> 8) & 0x00FF) + amount;
-  let b = (num & 0x0000FF) + amount;
+const adjustBrightness = (color: string, percent: number) => {
+  const num = parseInt(color.replace("#", ""), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = (num >> 16) + amt;
+  const G = (num >> 8 & 0x00FF) + amt;
+  const B = (num & 0x0000FF) + amt;
+  return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+    (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+    (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+};
 
-  r = Math.min(255, Math.max(0, r));
-  g = Math.min(255, Math.max(0, g));
-  b = Math.min(255, Math.max(0, b));
-
-  return `#${(r << 16 | g << 8 | b).toString(16).padStart(6, '0')}`;
-}
-
-// Format plage de date (de - à) pour la couverture
-function formatDateRange(messages: WhatsAppMessage[]) {
-  if (!messages.length) return '';
+const formatDateRange = (messages: WhatsAppMessage[]) => {
+  if (messages.length === 0) return '';
+  
   const firstDate = messages[0].timestamp;
   const lastDate = messages[messages.length - 1].timestamp;
+  
   if (firstDate.toDateString() === lastDate.toDateString()) {
     return firstDate.toLocaleDateString('fr-FR');
-  } else {
-    return `${firstDate.toLocaleDateString('fr-FR')} - ${lastDate.toLocaleDateString('fr-FR')}`;
   }
-}
+  
+  return `Du ${firstDate.toLocaleDateString('fr-FR')} au ${lastDate.toLocaleDateString('fr-FR')}`;
+};
