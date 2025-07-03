@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -24,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Demo data - barèmes disponibles
+// Demo data - barèmes disponibles (récupérés depuis la page Barème)
 const BAREMES_DISPONIBLES: BaremeComplet[] = [
   {
     id: "bar-std-001",
@@ -34,6 +36,17 @@ const BAREMES_DISPONIBLES: BaremeComplet[] = [
     marge: 3.0,
     valeurResiduelle: 2.5,
     typologie: "Crédit-Bail",
+    dateCreation: new Date("2024-01-01"),
+    actif: true
+  },
+  {
+    id: "bar-std-002",
+    nom: "Barème Standard LLD",
+    type: "standard",
+    taux: 6.8,
+    marge: 2.8,
+    valeurResiduelle: 0,
+    typologie: "LLD",
     dateCreation: new Date("2024-01-01"),
     actif: true
   },
@@ -116,13 +129,18 @@ const ConventionSelector = ({ selectedConvention, onConventionSelect }: Conventi
   const [selectedFournisseur, setSelectedFournisseur] = useState<string>("");
   const [isBaremeDialogOpen, setIsBaremeDialogOpen] = useState(false);
   const [selectedBaremeId, setSelectedBaremeId] = useState<string>("");
+  const [baremes, setBaremes] = useState<BaremeComplet[]>(BAREMES_DISPONIBLES);
+  
+  // Formulaire pour créer un nouveau barème (simplifié pour les conventions)
   const [newBaremeForm, setNewBaremeForm] = useState({
     nom: "",
     typologie: "Crédit-Bail",
-    type: "standard" as "standard" | "derogatoire",
+    type: "derogatoire" as "standard" | "derogatoire", // Par défaut dérogatoire pour les conventions
     taux: "",
     marge: "",
     valeurResiduelle: "",
+    duree: "36",
+    periodiciteModifiable: false,
     premierLoyerMajore: ""
   });
 
@@ -134,10 +152,23 @@ const ConventionSelector = ({ selectedConvention, onConventionSelect }: Conventi
     ? CONVENTIONS_DEMO.filter(conv => conv.fournisseurs.includes(selectedFournisseur))
     : CONVENTIONS_DEMO;
 
+  const resetBaremeForm = () => {
+    setNewBaremeForm({
+      nom: "",
+      typologie: "Crédit-Bail",
+      type: "derogatoire",
+      taux: "",
+      marge: "",
+      valeurResiduelle: "",
+      duree: "36",
+      periodiciteModifiable: false,
+      premierLoyerMajore: ""
+    });
+  };
+
   const handleCreateBareme = () => {
-    // Ici, vous pourriez ajouter la logique pour créer un nouveau barème
     const newBareme: BaremeComplet = {
-      id: `bar-${Date.now()}`,
+      id: `bar-conv-${Date.now()}`,
       nom: newBaremeForm.nom,
       type: newBaremeForm.type,
       taux: parseFloat(newBaremeForm.taux),
@@ -148,17 +179,12 @@ const ConventionSelector = ({ selectedConvention, onConventionSelect }: Conventi
       actif: true
     };
     
-    console.log("Nouveau barème créé:", newBareme);
+    setBaremes(prev => [...prev, newBareme]);
+    setSelectedBaremeId(newBareme.id);
     setIsBaremeDialogOpen(false);
-    setNewBaremeForm({ 
-      nom: "", 
-      typologie: "Crédit-Bail", 
-      type: "standard",
-      taux: "", 
-      marge: "", 
-      valeurResiduelle: "",
-      premierLoyerMajore: ""
-    });
+    resetBaremeForm();
+    
+    console.log("Nouveau barème créé pour convention:", newBareme);
   };
 
   const handleReconduct = (convention: Convention, startDate: Date, motif: string) => {
@@ -201,41 +227,42 @@ const ConventionSelector = ({ selectedConvention, onConventionSelect }: Conventi
         </CardContent>
       </Card>
 
-      {/* Sélection du Barème */}
+      {/* Sélection du Barème - Version améliorée */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 justify-between">
             <div className="flex items-center gap-2">
               <Percent className="h-5 w-5" />
-              Sélection du Barème
+              Sélection du Barème pour la Convention
             </div>
             <Dialog open={isBaremeDialogOpen} onOpenChange={setIsBaremeDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={resetBaremeForm}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Ajouter barème
+                  Nouveau barème
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>Créer un nouveau barème</DialogTitle>
+                  <DialogTitle>Créer un nouveau barème pour la convention</DialogTitle>
                   <DialogDescription>
-                    Créez un barème personnalisé pour cette convention
+                    Créez un barème personnalisé qui sera appliqué à cette convention
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div>
-                    <Label htmlFor="newBaremeNom">Nom du barème</Label>
+                    <Label htmlFor="newBaremeNom">Nom du barème *</Label>
                     <Input
                       id="newBaremeNom"
                       value={newBaremeForm.nom}
                       onChange={(e) => setNewBaremeForm(prev => ({ ...prev, nom: e.target.value }))}
-                      placeholder="Ex: Barème Convention Spéciale"
+                      placeholder="Ex: Barème Convention Spéciale Véhicules"
                     />
                   </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="newBaremeTypologie">Typologie</Label>
+                      <Label htmlFor="newBaremeTypologie">Typologie *</Label>
                       <Select value={newBaremeForm.typologie} onValueChange={(value) => setNewBaremeForm(prev => ({ ...prev, typologie: value }))}>
                         <SelectTrigger>
                           <SelectValue />
@@ -247,7 +274,7 @@ const ConventionSelector = ({ selectedConvention, onConventionSelect }: Conventi
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="newBaremeType">Type</Label>
+                      <Label htmlFor="newBaremeType">Type *</Label>
                       <Select value={newBaremeForm.type} onValueChange={(value: "standard" | "derogatoire") => setNewBaremeForm(prev => ({ ...prev, type: value }))}>
                         <SelectTrigger>
                           <SelectValue />
@@ -259,7 +286,8 @@ const ConventionSelector = ({ selectedConvention, onConventionSelect }: Conventi
                       </Select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+
+                  <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label htmlFor="newBaremeTaux">Taux (%)</Label>
                       <Input
@@ -282,8 +310,6 @@ const ConventionSelector = ({ selectedConvention, onConventionSelect }: Conventi
                         placeholder="2.8"
                       />
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="newBaremeVR">
                         {newBaremeForm.type === "standard" ? "Valeur résiduelle (%)" : "Valeur de reprise (%)"}
@@ -297,6 +323,19 @@ const ConventionSelector = ({ selectedConvention, onConventionSelect }: Conventi
                         placeholder="1.8"
                       />
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="newBaremeDuree">Durée par défaut (mois)</Label>
+                      <Input
+                        id="newBaremeDuree"
+                        type="number"
+                        value={newBaremeForm.duree}
+                        onChange={(e) => setNewBaremeForm(prev => ({ ...prev, duree: e.target.value }))}
+                        placeholder="36"
+                      />
+                    </div>
                     <div>
                       <Label htmlFor="newBaremePLM">Premier Loyer Majoré (%)</Label>
                       <Input
@@ -308,6 +347,15 @@ const ConventionSelector = ({ selectedConvention, onConventionSelect }: Conventi
                         placeholder="10.0"
                       />
                     </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="periodiciteModifiable"
+                      checked={newBaremeForm.periodiciteModifiable}
+                      onCheckedChange={(checked) => setNewBaremeForm(prev => ({ ...prev, periodiciteModifiable: checked as boolean }))}
+                    />
+                    <Label htmlFor="periodiciteModifiable">Périodicité modifiable</Label>
                   </div>
                 </div>
                 <DialogFooter>
@@ -324,10 +372,13 @@ const ConventionSelector = ({ selectedConvention, onConventionSelect }: Conventi
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {BAREMES_DISPONIBLES.map(bareme => (
+            <div className="text-sm text-muted-foreground mb-3">
+              Sélectionnez un barème existant ou créez-en un nouveau adapté à cette convention
+            </div>
+            {baremes.filter(b => b.actif).map(bareme => (
               <div
                 key={bareme.id}
-                className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                className={`p-4 border rounded-lg cursor-pointer transition-all ${
                   selectedBaremeId === bareme.id
                     ? "border-primary bg-primary/5"
                     : "border-border hover:border-primary/50"
@@ -335,14 +386,14 @@ const ConventionSelector = ({ selectedConvention, onConventionSelect }: Conventi
                 onClick={() => setSelectedBaremeId(bareme.id)}
               >
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h4 className="font-medium">{bareme.nom}</h4>
                       {selectedBaremeId === bareme.id && (
                         <CheckCircle className="h-4 w-4 text-primary" />
                       )}
                     </div>
-                    <div className="flex gap-2 mt-1">
+                    <div className="flex gap-2 mt-2">
                       <Badge variant="outline" className="text-xs">
                         Taux: {bareme.taux}%
                       </Badge>
@@ -352,11 +403,14 @@ const ConventionSelector = ({ selectedConvention, onConventionSelect }: Conventi
                       <Badge variant="outline" className="text-xs">
                         VR: {bareme.valeurResiduelle}%
                       </Badge>
+                      <Badge variant={bareme.type === "standard" ? "default" : "secondary"} className="text-xs">
+                        {bareme.type}
+                      </Badge>
                     </div>
                   </div>
-                  <Badge variant={bareme.type === "standard" ? "default" : "secondary"}>
-                    {bareme.type}
-                  </Badge>
+                  <div className="text-xs text-muted-foreground">
+                    {bareme.typologie}
+                  </div>
                 </div>
               </div>
             ))}
