@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -130,12 +131,13 @@ const ConventionSelector = ({ selectedConvention, onConventionSelect }: Conventi
   const [isBaremeDialogOpen, setIsBaremeDialogOpen] = useState(false);
   const [selectedBaremeId, setSelectedBaremeId] = useState<string>("");
   const [baremes, setBaremes] = useState<BaremeComplet[]>(BAREMES_DISPONIBLES);
+  const [baremeSelectionMode, setBaremeSelectionMode] = useState<"existing" | "new">("existing");
   
   // Formulaire pour créer un nouveau barème (simplifié pour les conventions)
   const [newBaremeForm, setNewBaremeForm] = useState({
     nom: "",
     typologie: "Crédit-Bail",
-    type: "derogatoire" as "standard" | "derogatoire", // Par défaut dérogatoire pour les conventions
+    type: "derogatoire" as "standard" | "derogatoire",
     taux: "",
     marge: "",
     valeurResiduelle: "",
@@ -164,6 +166,7 @@ const ConventionSelector = ({ selectedConvention, onConventionSelect }: Conventi
       periodiciteModifiable: false,
       premierLoyerMajore: ""
     });
+    setBaremeSelectionMode("existing");
   };
 
   const handleCreateBareme = () => {
@@ -227,194 +230,282 @@ const ConventionSelector = ({ selectedConvention, onConventionSelect }: Conventi
         </CardContent>
       </Card>
 
-      {/* Sélection du Barème - Version améliorée */}
+      {/* Sélection du Barème - Version améliorée avec barèmes existants */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 justify-between">
             <div className="flex items-center gap-2">
               <Percent className="h-5 w-5" />
-              Sélection du Barème pour la Convention
+              Barèmes pour la Convention
             </div>
             <Dialog open={isBaremeDialogOpen} onOpenChange={setIsBaremeDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" onClick={resetBaremeForm}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Nouveau barème
+                  Gérer les barèmes
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Créer un nouveau barème pour la convention</DialogTitle>
+                  <DialogTitle>Sélection du Barème pour la Convention</DialogTitle>
                   <DialogDescription>
-                    Créez un barème personnalisé qui sera appliqué à cette convention
+                    Choisissez un barème existant ou créez-en un nouveau
                   </DialogDescription>
                 </DialogHeader>
+                
                 <div className="space-y-6">
-                  <div>
-                    <Label htmlFor="newBaremeNom">Nom du barème *</Label>
-                    <Input
-                      id="newBaremeNom"
-                      value={newBaremeForm.nom}
-                      onChange={(e) => setNewBaremeForm(prev => ({ ...prev, nom: e.target.value }))}
-                      placeholder="Ex: Barème Convention Spéciale Véhicules"
-                    />
+                  {/* Mode de sélection */}
+                  <div className="flex gap-2">
+                    <Button 
+                      variant={baremeSelectionMode === "existing" ? "default" : "outline"}
+                      onClick={() => setBaremeSelectionMode("existing")}
+                      size="sm"
+                    >
+                      Barème existant
+                    </Button>
+                    <Button
+                      variant={baremeSelectionMode === "new" ? "default" : "outline"}
+                      onClick={() => setBaremeSelectionMode("new")}
+                      size="sm"
+                    >
+                      Nouveau barème
+                    </Button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="newBaremeTypologie">Typologie *</Label>
-                      <Select value={newBaremeForm.typologie} onValueChange={(value) => setNewBaremeForm(prev => ({ ...prev, typologie: value }))}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Crédit-Bail">Crédit-Bail / LOA</SelectItem>
-                          <SelectItem value="LLD">LLD</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  {baremeSelectionMode === "existing" ? (
+                    <div className="space-y-3">
+                      <div className="text-sm text-muted-foreground">
+                        Sélectionnez un barème existant depuis votre bibliothèque
+                      </div>
+                      <div className="max-h-96 overflow-y-auto space-y-2">
+                        {baremes.filter(b => b.actif).map(bareme => (
+                          <div
+                            key={bareme.id}
+                            className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                              selectedBaremeId === bareme.id
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:border-primary/50"
+                            }`}
+                            onClick={() => setSelectedBaremeId(bareme.id)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-medium">{bareme.nom}</h4>
+                                  {selectedBaremeId === bareme.id && (
+                                    <CheckCircle className="h-4 w-4 text-primary" />
+                                  )}
+                                </div>
+                                <div className="flex gap-2 mt-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    Taux: {bareme.taux}%
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    Marge: {bareme.marge}%
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    VR: {bareme.valeurResiduelle}%
+                                  </Badge>
+                                  <Badge variant={bareme.type === "standard" ? "default" : "secondary"} className="text-xs">
+                                    {bareme.type}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {bareme.typologie}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="newBaremeType">Type *</Label>
-                      <Select value={newBaremeForm.type} onValueChange={(value: "standard" | "derogatoire") => setNewBaremeForm(prev => ({ ...prev, type: value }))}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="standard">Standard</SelectItem>
-                          <SelectItem value="derogatoire">Dérogatoire</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="text-sm text-muted-foreground">
+                        Créez un nouveau barème personnalisé pour cette convention
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="newBaremeNom">Nom du barème *</Label>
+                        <Input
+                          id="newBaremeNom"
+                          value={newBaremeForm.nom}
+                          onChange={(e) => setNewBaremeForm(prev => ({ ...prev, nom: e.target.value }))}
+                          placeholder="Ex: Barème Convention Spéciale Véhicules"
+                        />
+                      </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="newBaremeTaux">Taux (%)</Label>
-                      <Input
-                        id="newBaremeTaux"
-                        type="number"
-                        step="0.1"
-                        value={newBaremeForm.taux}
-                        onChange={(e) => setNewBaremeForm(prev => ({ ...prev, taux: e.target.value }))}
-                        placeholder="6.5"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="newBaremeMarge">Marge (%)</Label>
-                      <Input
-                        id="newBaremeMarge"
-                        type="number"
-                        step="0.1"
-                        value={newBaremeForm.marge}
-                        onChange={(e) => setNewBaremeForm(prev => ({ ...prev, marge: e.target.value }))}
-                        placeholder="2.8"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="newBaremeVR">
-                        {newBaremeForm.type === "standard" ? "Valeur résiduelle (%)" : "Valeur de reprise (%)"}
-                      </Label>
-                      <Input
-                        id="newBaremeVR"
-                        type="number"
-                        step="0.1"
-                        value={newBaremeForm.valeurResiduelle}
-                        onChange={(e) => setNewBaremeForm(prev => ({ ...prev, valeurResiduelle: e.target.value }))}
-                        placeholder="1.8"
-                      />
-                    </div>
-                  </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="newBaremeTypologie">Typologie *</Label>
+                          <Select value={newBaremeForm.typologie} onValueChange={(value) => setNewBaremeForm(prev => ({ ...prev, typologie: value }))}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Crédit-Bail">Crédit-Bail / LOA</SelectItem>
+                              <SelectItem value="LLD">LLD</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="newBaremeType">Type *</Label>
+                          <Select value={newBaremeForm.type} onValueChange={(value: "standard" | "derogatoire") => setNewBaremeForm(prev => ({ ...prev, type: value }))}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="standard">Standard</SelectItem>
+                              <SelectItem value="derogatoire">Dérogatoire</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="newBaremeDuree">Durée par défaut (mois)</Label>
-                      <Input
-                        id="newBaremeDuree"
-                        type="number"
-                        value={newBaremeForm.duree}
-                        onChange={(e) => setNewBaremeForm(prev => ({ ...prev, duree: e.target.value }))}
-                        placeholder="36"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="newBaremePLM">Premier Loyer Majoré (%)</Label>
-                      <Input
-                        id="newBaremePLM"
-                        type="number"
-                        step="0.1"
-                        value={newBaremeForm.premierLoyerMajore}
-                        onChange={(e) => setNewBaremeForm(prev => ({ ...prev, premierLoyerMajore: e.target.value }))}
-                        placeholder="10.0"
-                      />
-                    </div>
-                  </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <Label htmlFor="newBaremeTaux">Taux (%)</Label>
+                          <Input
+                            id="newBaremeTaux"
+                            type="number"
+                            step="0.1"
+                            value={newBaremeForm.taux}
+                            onChange={(e) => setNewBaremeForm(prev => ({ ...prev, taux: e.target.value }))}
+                            placeholder="6.5"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="newBaremeMarge">Marge (%)</Label>
+                          <Input
+                            id="newBaremeMarge"
+                            type="number"
+                            step="0.1"
+                            value={newBaremeForm.marge}
+                            onChange={(e) => setNewBaremeForm(prev => ({ ...prev, marge: e.target.value }))}
+                            placeholder="2.8"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="newBaremeVR">
+                            {newBaremeForm.type === "standard" ? "Valeur résiduelle (%)" : "Valeur de reprise (%)"}
+                          </Label>
+                          <Input
+                            id="newBaremeVR"
+                            type="number"
+                            step="0.1"
+                            value={newBaremeForm.valeurResiduelle}
+                            onChange={(e) => setNewBaremeForm(prev => ({ ...prev, valeurResiduelle: e.target.value }))}
+                            placeholder="1.8"
+                          />
+                        </div>
+                      </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="periodiciteModifiable"
-                      checked={newBaremeForm.periodiciteModifiable}
-                      onCheckedChange={(checked) => setNewBaremeForm(prev => ({ ...prev, periodiciteModifiable: checked as boolean }))}
-                    />
-                    <Label htmlFor="periodiciteModifiable">Périodicité modifiable</Label>
-                  </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="newBaremeDuree">Durée par défaut (mois)</Label>
+                          <Input
+                            id="newBaremeDuree"
+                            type="number"
+                            value={newBaremeForm.duree}
+                            onChange={(e) => setNewBaremeForm(prev => ({ ...prev, duree: e.target.value }))}
+                            placeholder="36"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="newBaremePLM">Premier Loyer Majoré (%)</Label>
+                          <Input
+                            id="newBaremePLM"
+                            type="number"
+                            step="0.1"
+                            value={newBaremeForm.premierLoyerMajore}
+                            onChange={(e) => setNewBaremeForm(prev => ({ ...prev, premierLoyerMajore: e.target.value }))}
+                            placeholder="10.0"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="periodiciteModifiable"
+                          checked={newBaremeForm.periodiciteModifiable}
+                          onCheckedChange={(checked) => setNewBaremeForm(prev => ({ ...prev, periodiciteModifiable: checked as boolean }))}
+                        />
+                        <Label htmlFor="periodiciteModifiable">Périodicité modifiable</Label>
+                      </div>
+                    </div>
+                  )}
                 </div>
+                
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsBaremeDialogOpen(false)}>
                     Annuler
                   </Button>
-                  <Button onClick={handleCreateBareme}>
-                    Créer le barème
-                  </Button>
+                  {baremeSelectionMode === "existing" ? (
+                    <Button 
+                      onClick={() => setIsBaremeDialogOpen(false)}
+                      disabled={!selectedBaremeId}
+                    >
+                      Sélectionner ce barème
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={handleCreateBareme}
+                      disabled={!newBaremeForm.nom || !newBaremeForm.taux || !newBaremeForm.marge}
+                    >
+                      Créer le barème
+                    </Button>
+                  )}
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            <div className="text-sm text-muted-foreground mb-3">
-              Sélectionnez un barème existant ou créez-en un nouveau adapté à cette convention
-            </div>
-            {baremes.filter(b => b.actif).map(bareme => (
-              <div
-                key={bareme.id}
-                className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                  selectedBaremeId === bareme.id
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/50"
-                }`}
-                onClick={() => setSelectedBaremeId(bareme.id)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium">{bareme.nom}</h4>
-                      {selectedBaremeId === bareme.id && (
-                        <CheckCircle className="h-4 w-4 text-primary" />
-                      )}
-                    </div>
-                    <div className="flex gap-2 mt-2">
-                      <Badge variant="outline" className="text-xs">
-                        Taux: {bareme.taux}%
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        Marge: {bareme.marge}%
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        VR: {bareme.valeurResiduelle}%
-                      </Badge>
-                      <Badge variant={bareme.type === "standard" ? "default" : "secondary"} className="text-xs">
-                        {bareme.type}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {bareme.typologie}
-                  </div>
-                </div>
+          {selectedBaremeId ? (
+            <div className="space-y-3">
+              <div className="text-sm text-muted-foreground">
+                Barème sélectionné pour cette convention :
               </div>
-            ))}
-          </div>
+              {(() => {
+                const selectedBareme = baremes.find(b => b.id === selectedBaremeId);
+                return selectedBareme ? (
+                  <div className="p-4 border rounded-lg bg-primary/5 border-primary">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium">{selectedBareme.nom}</h4>
+                          <CheckCircle className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          <Badge variant="outline" className="text-xs">
+                            Taux: {selectedBareme.taux}%
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Marge: {selectedBareme.marge}%
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            VR: {selectedBareme.valeurResiduelle}%
+                          </Badge>
+                          <Badge variant={selectedBareme.type === "standard" ? "default" : "secondary"} className="text-xs">
+                            {selectedBareme.type}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {selectedBareme.typologie}
+                      </div>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          ) : (
+            <div className="p-4 border-2 border-dashed border-muted-foreground/25 rounded-lg text-center">
+              <p className="text-muted-foreground">
+                Aucun barème sélectionné. Cliquez sur "Gérer les barèmes" pour choisir ou créer un barème.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
