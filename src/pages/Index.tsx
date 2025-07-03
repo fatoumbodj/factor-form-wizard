@@ -1,173 +1,158 @@
-
-import Hero from '@/components/Hero';
-import Features from '@/components/Features';
-import QRCodeShowcase from '@/components/QRCodeShowcase';
-import { Button } from '@/components/ui/button';
-import { BookOpen, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { useLanguage } from '@/context/LanguageContext';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { Grid } from '@/components/ui/grid';
-import { Slider } from '@/components/ui/slider';
-import { useState, useEffect } from 'react';
-import CreateBookSection from '@/components/CreateBookSection';
-
+import { useState } from "react";
+// CreditBail Pro - Module Tiers
+import Header from "@/components/Layout/Header";
+import { AppSidebar } from "@/components/Layout/Sidebar";
+import StatsCard from "@/components/Dashboard/StatsCard";
+import TiersTable from "@/components/Tiers/TiersTable";
+import TiersForm from "@/components/Tiers/TiersForm";
+import { Button } from "@/components/ui/button";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { Users, Building, Shield, AlertTriangle, Plus } from "lucide-react";
 
 const Index = () => {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const { t } = useLanguage();
-  const [autoPlay, setAutoPlay] = useState(true);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  
-  const handleCreateBookClick = () => {
-    if (isAuthenticated) {
-      navigate('/designer');
-    } else {
-      navigate('/login', { state: { redirectAfterLogin: '/designer' } });
-    }
-  };
+  const [currentView, setCurrentView] = useState<"dashboard" | "tiers" | "form">("dashboard");
 
-  const handleViewProcessClick = () => {
-    navigate('/process');
-  };
+  const renderContent = () => {
+    switch (currentView) {
+      case "tiers":
+        return <TiersTable />;
+      case "form":
+        return <TiersForm />;
+      default:
+        return (
+          <div className="space-y-6">
+            {/* Statistiques */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <StatsCard
+                title="Total Tiers"
+                value="1,247"
+                subtitle="Actifs dans le système"
+                icon={<Users className="h-4 w-4" />}
+                trend={{ value: "+12% ce mois", isPositive: true }}
+              />
+              <StatsCard
+                title="Clients Actifs"
+                value="892"
+                subtitle="Avec contrats en cours"
+                icon={<Building className="h-4 w-4" />}
+                trend={{ value: "+8% ce mois", isPositive: true }}
+              />
+              <StatsCard
+                title="Garants"
+                value="156"
+                subtitle="Validés et actifs"
+                icon={<Shield className="h-4 w-4" />}
+              />
+              <StatsCard
+                title="Risques Élevés"
+                value="23"
+                subtitle="Nécessitent un suivi"
+                icon={<AlertTriangle className="h-4 w-4" />}
+                trend={{ value: "-3 ce mois", isPositive: true }}
+              />
+            </div>
 
-  // Sample book covers for the carousel
-  const bookCovers = [
-    { src: "/covers/book-cover-1.png", alt: "Exemple de livre souvenir" },
-    { src: "/covers/book-cover-2.png", alt: "Livre de conversations" },
-    { src: "/covers/book-cover-3.png", alt: "Souvenirs WhatsApp" },
-    { src: "/covers/book-cover-4.png", alt: "Album de messages" },
-  ];
-
-  // Autoplay functionality for carousel - fixed to use window.setInterval
-  useEffect(() => {
-    let intervalId: number | undefined;
-    
-    if (autoPlay) {
-      intervalId = window.setInterval(() => {
-        setCurrentSlide((prev) => (prev + 1) % bookCovers.length);
-      }, 3000);
-    }
-    
-    return () => {
-      if (intervalId !== undefined) {
-        window.clearInterval(intervalId);
-      }
-    };
-  }, [autoPlay, bookCovers.length]);
-
-  return (
-    <div>
-      <main>
-        <Hero />
-           {/* QR Code Showcase - New section added between Hero and Features */}
-        <QRCodeShowcase />
-         {/* Section Créer mon livre - Nouvelle interface */}
-        <CreateBookSection />
-        
-        <Features />
-        
-        {/* Middle CTA */}
-        <section className="py-20 bg-ts-gold/10">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col lg:flex-row items-center gap-12">
-              
-              {/* Carousel des couvertures */}
-              <div className="w-full lg:w-1/2">
-                <div className="max-w-md mx-auto relative">
-                  <div className="overflow-hidden rounded-lg shadow-xl">
-                    <Carousel className="w-full" setApi={(api) => api?.scrollTo(currentSlide)}>
-                      <CarouselContent>
-                        {bookCovers.map((book, index) => (
-                          <CarouselItem key={index}>
-                            <div className="p-1 mt-10">
-                              <div className="overflow-hidden rounded-lg shadow-lg">
-                                <AspectRatio ratio={3 / 4} className="bg-white">
-                                  <img
-                                    src={book.src}
-                                    alt={book.alt}
-                                    className="object-cover w-full h-full transition-transform duration-300 hover:scale-105"
-                                  />
-                                </AspectRatio>
-                              </div>
-                            </div>
-                          </CarouselItem>
-                        ))}
-                      </CarouselContent>
-                      <div className="flex justify-center mt-4">
-                        <CarouselPrevious />
-                        <CarouselNext />
-                      </div>
-                    </Carousel>
-                  </div>
-
-                  <div className="mt-4 flex justify-center">
-                    <div className="w-3/4">
-                      <Slider
-                        value={[currentSlide]}
-                        min={0}
-                        max={bookCovers.length - 1}
-                        step={1}
-                        onValueChange={(value) => setCurrentSlide(value[0])}
-                        className="my-4"
-                      />
-                    </div>
-                  </div>
-
-                  <Grid cols={4} className="gap-2 mt-2 max-w-sm mx-auto">
-                    {bookCovers.map((book, index) => (
-                      <div
-                        key={index}
-                        className={`cursor-pointer rounded-md overflow-hidden border-2 ${currentSlide === index ? 'border-ts-gold' : 'border-transparent'}`}
-                        onClick={() => setCurrentSlide(index)}
-                      >
-                        <AspectRatio ratio={3 / 4}>
-                          <img
-                            src={book.src}
-                            alt={`Miniature ${index + 1}`}
-                            className="object-cover w-full h-full"
-                          />
-                        </AspectRatio>
-                      </div>
-                    ))}
-                  </Grid>
+            {/* Actions rapides */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-card p-6 rounded-lg border border-border">
+                <h3 className="text-lg font-semibold mb-4">Actions Rapides</h3>
+                <div className="space-y-3">
+                  <Button 
+                    className="w-full justify-start" 
+                    variant="outline"
+                    onClick={() => setCurrentView("form")}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Créer un nouveau tiers
+                  </Button>
+                  <Button 
+                    className="w-full justify-start" 
+                    variant="outline"
+                    onClick={() => setCurrentView("tiers")}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Gérer les tiers existants
+                  </Button>
                 </div>
               </div>
 
-              {/* Texte + boutons */}
-              <div className="w-full lg:w-1/2 text-center lg:text-left">
-                <h2 className="text-3xl md:text-4xl font-serif font-semibold text-ts-indigo mb-6">
-                  Transformez vos souvenirs en un vrai livre 📖
-                </h2>
-                <p className="text-gray-700 mb-8 text-lg">
-                  En quelques clics, créez un livre personnalisé à partir de vos messages. Le cadeau idéal pour vos proches — ou pour vous-même.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                  <Button 
-                    className="btn-primary text-lg px-8 py-6 flex items-center gap-2"
-                    onClick={handleCreateBookClick}
-                  >
-                    <BookOpen className="h-5 w-5" />
-                    Créer mon livre
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="border-ts-indigo text-ts-indigo hover:bg-ts-indigo/10 flex items-center gap-2"
-                    onClick={handleViewProcessClick}
-                  >
-                    Voir comment ça marche
-                    <ChevronRight className="h-5 w-5" />
-                  </Button>
+              <div className="bg-card p-6 rounded-lg border border-border">
+                <h3 className="text-lg font-semibold mb-4">Tiers Récents</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <span>SARL Technologies Plus</span>
+                    <span className="text-muted-foreground">Aujourd'hui</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span>Martin Dupont</span>
+                    <span className="text-muted-foreground">Hier</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span>Équipements Industriels SA</span>
+                    <span className="text-muted-foreground">Il y a 2 jours</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-card p-6 rounded-lg border border-border">
+                <h3 className="text-lg font-semibold mb-4">Alertes</h3>
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-3">
+                    <AlertTriangle className="h-4 w-4 text-orange-500 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-medium">Documents manquants</p>
+                      <p className="text-muted-foreground">3 tiers en attente</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-medium">Validation en attente</p>
+                      <p className="text-muted-foreground">1 dossier KYC</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </section>
-      </main>
-    </div>
+        );
+    }
+  };
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <AppSidebar />
+        <div className="flex-1">
+          <Header />
+          
+          <main className="max-w-7xl mx-auto px-6 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              {currentView === "dashboard" && "Tableau de Bord"}
+              {currentView === "tiers" && "Gestion des Tiers"}
+              {currentView === "form" && "Nouveau Tiers"}
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              {currentView === "dashboard" && "Vue d'ensemble de la gestion des tiers"}
+              {currentView === "tiers" && "Gérez vos clients, fournisseurs et garants"}
+              {currentView === "form" && "Créer un nouveau tiers dans le système"}
+            </p>
+          </div>
+          
+          {currentView !== "dashboard" && (
+            <Button variant="outline" onClick={() => setCurrentView("dashboard")}>
+              Retour au tableau de bord
+            </Button>
+          )}
+        </div>
+
+            {renderContent()}
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 };
 
