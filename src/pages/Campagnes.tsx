@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import Header from "@/components/Layout/Header";
 import { AppSidebar } from "@/components/Layout/Sidebar";
@@ -16,7 +15,6 @@ import { Campagne } from "@/types/leasing";
 import { DatePicker } from "@/components/ui/datepicker";
 import CampagneWorkflow, { StatutCampagne } from "@/components/Campagnes/CampagneWorkflow";
 import CampagneKPI from "@/components/Campagnes/CampagneKPI";
-import MaterielSelector from "@/components/Campagnes/MaterielSelector";
 import CanauxDiffusion from "@/components/Campagnes/CanauxDiffusion";
 import {
   Table,
@@ -52,7 +50,7 @@ interface CampagneComplete extends Campagne {
     unite: string;
   };
   canauxDiffusion: string[];
-  materielsEligibles: string[];
+  categoriesMaterielles: string[];
   kpi?: {
     nombreDossiers: number;
     objectifDossiers: number;
@@ -88,7 +86,7 @@ const CAMPAGNES_DEMO: CampagneComplete[] = [
       unite: "dossiers"
     },
     canauxDiffusion: ["emailing", "portail-client", "agences"],
-    materielsEligibles: ["mat-1", "mat-2"],
+    categoriesMaterielles: ["Véhicules légers", "Véhicules utilitaires"],
     kpi: {
       nombreDossiers: 32,
       objectifDossiers: 50,
@@ -120,7 +118,7 @@ const CAMPAGNES_DEMO: CampagneComplete[] = [
       unite: "FCFA"
     },
     canauxDiffusion: ["commercial", "agences"],
-    materielsEligibles: ["mat-3"],
+    categoriesMaterielles: ["Équipements agricoles"],
     kpi: {
       nombreDossiers: 18,
       objectifDossiers: 30,
@@ -153,7 +151,7 @@ const CAMPAGNES_DEMO: CampagneComplete[] = [
       unite: "dossiers"
     },
     canauxDiffusion: ["agences"],
-    materielsEligibles: ["mat-4"],
+    categoriesMaterielles: ["Équipements BTP"],
     kpi: {
       nombreDossiers: 28,
       objectifDossiers: 25,
@@ -166,8 +164,47 @@ const CAMPAGNES_DEMO: CampagneComplete[] = [
   }
 ];
 
-const FOURNISSEURS_DISPONIBLES = [
-  "babacar-fils", "senegal-auto", "sonacos", "afrique-materiel", "dakar-equipement", "techno-equipement", "agri-senegal"
+const CATEGORIES_MATERIELLES = [
+  "Véhicules légers", "Véhicules utilitaires", "Équipements agricoles", 
+  "Équipements BTP", "Machines industrielles", "Matériel informatique",
+  "Équipements médicaux", "Matériel de transport"
+];
+
+// Barèmes existants (simulés)
+const BAREMES_EXISTANTS = [
+  {
+    id: "bareme-standard-1",
+    nom: "Barème Standard Véhicules",
+    taux: 7.5,
+    marge: 2.0,
+    valeurResiduelle: 1.5,
+    type: "standard"
+  },
+  {
+    id: "bareme-promo-1",
+    nom: "Barème Promotionnel Agricole",
+    taux: 6.0,
+    marge: 1.8,
+    valeurResiduelle: 2.0,
+    type: "promotionnel"
+  },
+  {
+    id: "bareme-btp-1",
+    nom: "Barème Spécial BTP",
+    taux: 7.0,
+    marge: 2.2,
+    valeurResiduelle: 1.8,
+    type: "spécialisé"
+  }
+];
+
+const CANAUX_DIFFUSION = [
+  { id: "emailing", nom: "E-mailing", description: "Diffusion par email" },
+  { id: "sms", nom: "SMS", description: "Notifications SMS" },
+  { id: "portail-client", nom: "Portail Client", description: "Publication sur le portail client" },
+  { id: "agences", nom: "Agences", description: "Communication en agences" },
+  { id: "commercial", nom: "Force Commerciale", description: "Via l'équipe commerciale" },
+  { id: "reseaux-sociaux", nom: "Réseaux Sociaux", description: "Publication sur les réseaux" }
 ];
 
 const Campagnes = () => {
@@ -182,10 +219,7 @@ const Campagnes = () => {
     nom: "",
     description: "",
     type: "fournisseur" as "fournisseur" | "banque",
-    fournisseurs: [] as string[],
-    taux: "",
-    marge: "",
-    valeurResiduelle: "",
+    categoriesMaterielles: [] as string[],
     dateDebut: undefined as Date | undefined,
     dateFin: undefined as Date | undefined,
     prioritaire: false,
@@ -193,7 +227,13 @@ const Campagnes = () => {
     objectifType: "volume" as "volume" | "valeur",
     objectifValeur: "",
     canauxDiffusion: [] as string[],
-    materielsEligibles: [] as string[]
+    baremeExistant: "",
+    nouveauBareme: {
+      nom: "",
+      taux: "",
+      marge: "",
+      valeurResiduelle: ""
+    }
   });
 
   const resetForm = () => {
@@ -201,10 +241,7 @@ const Campagnes = () => {
       nom: "",
       description: "",
       type: "fournisseur",
-      fournisseurs: [],
-      taux: "",
-      marge: "",
-      valeurResiduelle: "",
+      categoriesMaterielles: [],
       dateDebut: undefined,
       dateFin: undefined,
       prioritaire: false,
@@ -212,7 +249,13 @@ const Campagnes = () => {
       objectifType: "volume",
       objectifValeur: "",
       canauxDiffusion: [],
-      materielsEligibles: []
+      baremeExistant: "",
+      nouveauBareme: {
+        nom: "",
+        taux: "",
+        marge: "",
+        valeurResiduelle: ""
+      }
     });
     setEditingCampagne(null);
     setCurrentStep(1);
@@ -224,10 +267,7 @@ const Campagnes = () => {
       nom: campagne.nom,
       description: campagne.description,
       type: campagne.type,
-      fournisseurs: campagne.fournisseurs || [],
-      taux: campagne.bareme.taux.toString(),
-      marge: campagne.bareme.marge.toString(),
-      valeurResiduelle: campagne.bareme.valeurResiduelle.toString(),
+      categoriesMaterielles: campagne.categoriesMaterielles,
       dateDebut: campagne.dateDebut,
       dateFin: campagne.dateFin,
       prioritaire: campagne.prioritaire,
@@ -235,7 +275,13 @@ const Campagnes = () => {
       objectifType: campagne.objectifCommercial.type,
       objectifValeur: campagne.objectifCommercial.objectif.toString(),
       canauxDiffusion: campagne.canauxDiffusion,
-      materielsEligibles: campagne.materielsEligibles
+      baremeExistant: "",
+      nouveauBareme: {
+        nom: "",
+        taux: campagne.bareme.taux.toString(),
+        marge: campagne.bareme.marge.toString(),
+        valeurResiduelle: campagne.bareme.valeurResiduelle.toString()
+      }
     });
     setIsDialogOpen(true);
   };
@@ -243,17 +289,29 @@ const Campagnes = () => {
   const handleSave = () => {
     if (!formData.dateDebut || !formData.dateFin) return;
 
+    let bareme;
+    if (formData.baremeExistant) {
+      const baremeExist = BAREMES_EXISTANTS.find(b => b.id === formData.baremeExistant);
+      bareme = {
+        taux: baremeExist?.taux || 0,
+        marge: baremeExist?.marge || 0,
+        valeurResiduelle: baremeExist?.valeurResiduelle || 0
+      };
+    } else {
+      bareme = {
+        taux: parseFloat(formData.nouveauBareme.taux),
+        marge: parseFloat(formData.nouveauBareme.marge),
+        valeurResiduelle: parseFloat(formData.nouveauBareme.valeurResiduelle)
+      };
+    }
+
     const campagneData: CampagneComplete = {
       id: editingCampagne?.id || `camp-${Date.now()}`,
       nom: formData.nom,
       description: formData.description,
       type: formData.type,
-      fournisseurs: formData.type === "fournisseur" ? formData.fournisseurs : undefined,
-      bareme: {
-        taux: parseFloat(formData.taux),
-        marge: parseFloat(formData.marge),
-        valeurResiduelle: parseFloat(formData.valeurResiduelle)
-      },
+      fournisseurs: formData.type === "fournisseur" ? [] : undefined,
+      bareme,
       dateDebut: formData.dateDebut,
       dateFin: formData.dateFin,
       prioritaire: formData.prioritaire,
@@ -265,7 +323,7 @@ const Campagnes = () => {
         unite: formData.objectifType === "volume" ? "dossiers" : "FCFA"
       },
       canauxDiffusion: formData.canauxDiffusion,
-      materielsEligibles: formData.materielsEligibles
+      categoriesMaterielles: formData.categoriesMaterielles
     };
 
     if (editingCampagne) {
@@ -333,13 +391,40 @@ const Campagnes = () => {
     }
   };
 
-  const toggleFournisseur = (fournisseur: string) => {
+  const toggleCategorieMaterielles = (categorie: string) => {
     setFormData(prev => ({
       ...prev,
-      fournisseurs: prev.fournisseurs.includes(fournisseur)
-        ? prev.fournisseurs.filter(f => f !== fournisseur)
-        : [...prev.fournisseurs, fournisseur]
+      categoriesMaterielles: prev.categoriesMaterielles.includes(categorie)
+        ? prev.categoriesMaterielles.filter(c => c !== categorie)
+        : [...prev.categoriesMaterielles, categorie]
     }));
+  };
+
+  const toggleCanalDiffusion = (canal: string) => {
+    setFormData(prev => ({
+      ...prev,
+      canauxDiffusion: prev.canauxDiffusion.includes(canal)
+        ? prev.canauxDiffusion.filter(c => c !== canal)
+        : [...prev.canauxDiffusion, canal]
+    }));
+  };
+
+  const handleBaremeExistantChange = (baremeId: string) => {
+    setFormData(prev => ({ ...prev, baremeExistant: baremeId }));
+    if (baremeId) {
+      const bareme = BAREMES_EXISTANTS.find(b => b.id === baremeId);
+      if (bareme) {
+        setFormData(prev => ({
+          ...prev,
+          nouveauBareme: {
+            nom: bareme.nom,
+            taux: bareme.taux.toString(),
+            marge: bareme.marge.toString(),
+            valeurResiduelle: bareme.valeurResiduelle.toString()
+          }
+        }));
+      }
+    }
   };
 
   const renderFormStep = () => {
@@ -359,7 +444,7 @@ const Campagnes = () => {
               </div>
               <div>
                 <Label htmlFor="type">Type de campagne *</Label>
-                <Select value={formData.type} onValueChange={(value: "fournisseur" | "banque") => setFormData(prev => ({ ...prev, type: value, fournisseurs: [] }))}>
+                <Select value={formData.type} onValueChange={(value: "fournisseur" | "banque") => setFormData(prev => ({ ...prev, type: value }))}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -382,28 +467,24 @@ const Campagnes = () => {
               />
             </div>
 
-            {formData.type === "fournisseur" && (
-              <div>
-                <Label>Fournisseurs partenaires *</Label>
-                <div className="grid grid-cols-3 gap-2 mt-2">
-                  {FOURNISSEURS_DISPONIBLES.map(fournisseur => (
-                    <div
-                      key={fournisseur}
-                      className={`p-2 border rounded cursor-pointer transition-colors ${
-                        formData.fournisseurs.includes(fournisseur)
-                          ? "bg-primary/10 border-primary"
-                          : "hover:bg-accent"
-                      }`}
-                      onClick={() => toggleFournisseur(fournisseur)}
-                    >
-                      <div className="text-sm font-medium">
-                        {fournisseur.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div>
+              <Label>Catégories matérielles *</Label>
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                {CATEGORIES_MATERIELLES.map(categorie => (
+                  <div
+                    key={categorie}
+                    className={`p-2 border rounded cursor-pointer transition-colors ${
+                      formData.categoriesMaterielles.includes(categorie)
+                        ? "bg-primary/10 border-primary"
+                        : "hover:bg-accent"
+                    }`}
+                    onClick={() => toggleCategorieMaterielles(categorie)}
+                  >
+                    <div className="text-sm font-medium">{categorie}</div>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -420,64 +501,6 @@ const Campagnes = () => {
                   value={formData.dateFin}
                   onChange={(date) => setFormData(prev => ({ ...prev, dateFin: date }))}
                   placeholder="Sélectionner la date de fin"
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 2:
-        return (
-          <MaterielSelector
-            fournisseursSelectionnes={formData.fournisseurs}
-            materielsSelectionnes={formData.materielsEligibles}
-            onMaterielToggle={(materielId) => {
-              setFormData(prev => ({
-                ...prev,
-                materielsEligibles: prev.materielsEligibles.includes(materielId)
-                  ? prev.materielsEligibles.filter(m => m !== materielId)
-                  : [...prev.materielsEligibles, materielId]
-              }));
-            }}
-            onArgumentsChange={() => {}}
-          />
-        );
-
-      case 3:
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="taux">Taux promotionnel (%)</Label>
-                <Input
-                  id="taux"
-                  type="number"
-                  step="0.1"
-                  value={formData.taux}
-                  onChange={(e) => setFormData(prev => ({ ...prev, taux: e.target.value }))}
-                  placeholder="5.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="marge">Marge (%)</Label>
-                <Input
-                  id="marge"
-                  type="number"
-                  step="0.1"
-                  value={formData.marge}
-                  onChange={(e) => setFormData(prev => ({ ...prev, marge: e.target.value }))}
-                  placeholder="2.0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="valeurResiduelle">Valeur Résiduelle (%)</Label>
-                <Input
-                  id="valeurResiduelle"
-                  type="number"
-                  step="0.1"
-                  value={formData.valeurResiduelle}
-                  onChange={(e) => setFormData(prev => ({ ...prev, valeurResiduelle: e.target.value }))}
-                  placeholder="1.5"
                 />
               </div>
             </div>
@@ -509,6 +532,26 @@ const Campagnes = () => {
               </div>
             </div>
 
+            <div>
+              <Label>Canaux de diffusion</Label>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                {CANAUX_DIFFUSION.map(canal => (
+                  <div
+                    key={canal.id}
+                    className={`p-3 border rounded cursor-pointer transition-colors ${
+                      formData.canauxDiffusion.includes(canal.id)
+                        ? "bg-primary/10 border-primary"
+                        : "hover:bg-accent"
+                    }`}
+                    onClick={() => toggleCanalDiffusion(canal.id)}
+                  >
+                    <div className="font-medium text-sm">{canal.nom}</div>
+                    <div className="text-xs text-muted-foreground">{canal.description}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <Switch
@@ -531,20 +574,135 @@ const Campagnes = () => {
           </div>
         );
 
-      case 4:
+      case 2:
         return (
-          <CanauxDiffusion
-            canauxSelectionnes={formData.canauxDiffusion}
-            onCanalToggle={(canalId) => {
-              setFormData(prev => ({
-                ...prev,
-                canauxDiffusion: prev.canauxDiffusion.includes(canalId)
-                  ? prev.canauxDiffusion.filter(c => c !== canalId)
-                  : [...prev.canauxDiffusion, canalId]
-              }));
-            }}
-            onParametresChange={() => {}}
-          />
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Sélection du Barème</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Choisissez un barème existant ou créez-en un nouveau
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <Label>Barème existant</Label>
+                  <Select value={formData.baremeExistant} onValueChange={handleBaremeExistantChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner un barème existant" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BAREMES_EXISTANTS.map(bareme => (
+                        <SelectItem key={bareme.id} value={bareme.id}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{bareme.nom}</span>
+                            <span className="text-xs text-muted-foreground">
+                              Taux: {bareme.taux}% - Marge: {bareme.marge}% - VR: {bareme.valeurResiduelle}%
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      ou créer un nouveau barème
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="nouveauBareme.nom">Nom du nouveau barème</Label>
+                    <Input
+                      id="nouveauBareme.nom"
+                      value={formData.nouveauBareme.nom}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        nouveauBareme: { ...prev.nouveauBareme, nom: e.target.value }
+                      }))}
+                      placeholder="Ex: Barème Promo Été 2024"
+                      disabled={!!formData.baremeExistant}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="nouveauBareme.taux">Taux (%)</Label>
+                      <Input
+                        id="nouveauBareme.taux"
+                        type="number"
+                        step="0.1"
+                        value={formData.nouveauBareme.taux}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          nouveauBareme: { ...prev.nouveauBareme, taux: e.target.value }
+                        }))}
+                        placeholder="5.5"
+                        disabled={!!formData.baremeExistant}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="nouveauBareme.marge">Marge (%)</Label>
+                      <Input
+                        id="nouveauBareme.marge"
+                        type="number"
+                        step="0.1"
+                        value={formData.nouveauBareme.marge}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          nouveauBareme: { ...prev.nouveauBareme, marge: e.target.value }
+                        }))}
+                        placeholder="2.0"
+                        disabled={!!formData.baremeExistant}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="nouveauBareme.valeurResiduelle">Valeur Résiduelle (%)</Label>
+                      <Input
+                        id="nouveauBareme.valeurResiduelle"
+                        type="number"
+                        step="0.1"
+                        value={formData.nouveauBareme.valeurResiduelle}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          nouveauBareme: { ...prev.nouveauBareme, valeurResiduelle: e.target.value }
+                        }))}
+                        placeholder="1.5"
+                        disabled={!!formData.baremeExistant}
+                      />
+                    </div>
+                  </div>
+
+                  {(formData.nouveauBareme.taux || formData.baremeExistant) && (
+                    <div className="bg-muted p-4 rounded-lg">
+                      <h4 className="font-medium mb-2">Aperçu du barème</h4>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Taux:</span>
+                          <span className="ml-2 font-medium">{formData.nouveauBareme.taux}%</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Marge:</span>
+                          <span className="ml-2 font-medium">{formData.nouveauBareme.marge}%</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">VR:</span>
+                          <span className="ml-2 font-medium">{formData.nouveauBareme.valeurResiduelle}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         );
 
       default:
@@ -581,13 +739,11 @@ const Campagnes = () => {
                 <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>
-                      {editingCampagne ? "Modifier la Campagne" : "Nouvelle Campagne"} - Étape {currentStep}/4
+                      {editingCampagne ? "Modifier la Campagne" : "Nouvelle Campagne"} - Étape {currentStep}/2
                     </DialogTitle>
                     <DialogDescription>
-                      {currentStep === 1 && "Informations générales de la campagne"}
-                      {currentStep === 2 && "Sélection des matériels éligibles"}
-                      {currentStep === 3 && "Conditions préférentielles et objectifs"}
-                      {currentStep === 4 && "Canaux de diffusion"}
+                      {currentStep === 1 && "Informations générales et canaux de diffusion"}
+                      {currentStep === 2 && "Sélection du barème"}
                     </DialogDescription>
                   </DialogHeader>
                   
@@ -602,7 +758,7 @@ const Campagnes = () => {
                         {currentStep > 1 ? "Précédent" : "Annuler"}
                       </Button>
                       <div className="flex gap-2">
-                        {currentStep < 4 ? (
+                        {currentStep < 2 ? (
                           <Button onClick={() => setCurrentStep(prev => prev + 1)}>
                             Suivant
                           </Button>
