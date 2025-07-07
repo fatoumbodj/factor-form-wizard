@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import Header from "@/components/Layout/Header";
 import { AppSidebar } from "@/components/Layout/Sidebar";
@@ -432,6 +433,30 @@ const Campagnes = () => {
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
+                <Label htmlFor="dateDebut">Date de début *</Label>
+                <DatePicker
+                  value={formData.dateDebut}
+                  onChange={(date) => setFormData(prev => ({ ...prev, dateDebut: date }))}
+                  placeholder="Sélectionner la date de début"
+                />
+              </div>
+              <div>
+                <Label htmlFor="dateFin">Date de fin *</Label>
+                <DatePicker
+                  value={formData.dateFin}
+                  onChange={(date) => setFormData(prev => ({ ...prev, dateFin: date }))}
+                  placeholder="Sélectionner la date de fin"
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
                 <Label htmlFor="nom">Nom de la campagne *</Label>
                 <Input
                   id="nom"
@@ -465,44 +490,6 @@ const Campagnes = () => {
               />
             </div>
 
-            <div>
-              <Label>Catégories matérielles *</Label>
-              <div className="grid grid-cols-3 gap-2 mt-2">
-                {CATEGORIES_MATERIELLES.map(categorie => (
-                  <div
-                    key={categorie}
-                    className={`p-2 border rounded cursor-pointer transition-colors ${
-                      formData.categoriesMaterielles.includes(categorie)
-                        ? "bg-primary/10 border-primary"
-                        : "hover:bg-accent"
-                    }`}
-                    onClick={() => toggleCategorieMaterielles(categorie)}
-                  >
-                    <div className="text-sm font-medium">{categorie}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dateDebut">Date de début *</Label>
-                <DatePicker
-                  value={formData.dateDebut}
-                  onChange={(date) => setFormData(prev => ({ ...prev, dateDebut: date }))}
-                  placeholder="Sélectionner la date de début"
-                />
-              </div>
-              <div>
-                <Label htmlFor="dateFin">Date de fin *</Label>
-                <DatePicker
-                  value={formData.dateFin}
-                  onChange={(date) => setFormData(prev => ({ ...prev, dateFin: date }))}
-                  placeholder="Sélectionner la date de fin"
-                />
-              </div>
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Type d'objectif commercial</Label>
@@ -527,6 +514,25 @@ const Campagnes = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, objectifValeur: e.target.value }))}
                   placeholder={formData.objectifType === "volume" ? "50" : "1000000000"}
                 />
+              </div>
+            </div>
+
+            <div>
+              <Label>Catégories matérielles *</Label>
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                {CATEGORIES_MATERIELLES.map(categorie => (
+                  <div
+                    key={categorie}
+                    className={`p-2 border rounded cursor-pointer transition-colors ${
+                      formData.categoriesMaterielles.includes(categorie)
+                        ? "bg-primary/10 border-primary"
+                        : "hover:bg-accent"
+                    }`}
+                    onClick={() => toggleCategorieMaterielles(categorie)}
+                  >
+                    <div className="text-sm font-medium">{categorie}</div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -572,7 +578,7 @@ const Campagnes = () => {
           </div>
         );
 
-      case 2:
+      case 3:
         return (
           <div className="space-y-6">
             <Card>
@@ -737,11 +743,12 @@ const Campagnes = () => {
                 <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>
-                      {editingCampagne ? "Modifier la Campagne" : "Nouvelle Campagne"} - Étape {currentStep}/2
+                      {editingCampagne ? "Modifier la Campagne" : "Nouvelle Campagne"} - Étape {currentStep}/3
                     </DialogTitle>
                     <DialogDescription>
-                      {currentStep === 1 && "Informations générales et canaux de diffusion"}
-                      {currentStep === 2 && "Sélection du barème"}
+                      {currentStep === 1 && "Définir les dates de la campagne"}
+                      {currentStep === 2 && "Paramètres et objectifs de la campagne"}
+                      {currentStep === 3 && "Sélection du barème"}
                     </DialogDescription>
                   </DialogHeader>
                   
@@ -756,7 +763,7 @@ const Campagnes = () => {
                         {currentStep > 1 ? "Précédent" : "Annuler"}
                       </Button>
                       <div className="flex gap-2">
-                        {currentStep < 2 ? (
+                        {currentStep < 3 ? (
                           <Button onClick={() => setCurrentStep(prev => prev + 1)}>
                             Suivant
                           </Button>
