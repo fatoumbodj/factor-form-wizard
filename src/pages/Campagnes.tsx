@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import Header from "@/components/Layout/Header";
 import { AppSidebar } from "@/components/Layout/Sidebar";
@@ -11,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Edit, Trash2, Zap, Calendar, Target, TrendingUp, Settings, Eye } from "lucide-react";
+import { Plus, Edit, Trash2, Zap, Calendar, Target, TrendingUp, Settings, Eye, CheckCircle } from "lucide-react";
 import { Campagne } from "@/types/leasing";
 import { DatePicker } from "@/components/ui/datepicker";
 import CampagneWorkflow, { StatutCampagne } from "@/components/Campagnes/CampagneWorkflow";
@@ -211,7 +210,9 @@ const Campagnes = () => {
   const [currentTab, setCurrentTab] = useState("actives");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isKPIDialogOpen, setIsKPIDialogOpen] = useState(false);
+  const [isValidationDialogOpen, setIsValidationDialogOpen] = useState(false);
   const [selectedCampagneKPI, setSelectedCampagneKPI] = useState<CampagneComplete | null>(null);
+  const [selectedCampagneValidation, setSelectedCampagneValidation] = useState<CampagneComplete | null>(null);
   const [editingCampagne, setEditingCampagne] = useState<CampagneComplete | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -348,6 +349,23 @@ const Campagnes = () => {
   const handleViewKPI = (campagne: CampagneComplete) => {
     setSelectedCampagneKPI(campagne);
     setIsKPIDialogOpen(true);
+  };
+
+  const handleValidation = (campagne: CampagneComplete) => {
+    setSelectedCampagneValidation(campagne);
+    setIsValidationDialogOpen(true);
+  };
+
+  const handleValidationSubmit = (action: 'valider' | 'refuser') => {
+    if (!selectedCampagneValidation) return;
+    
+    const nouveauStatut: StatutCampagne = action === 'valider' ? 'validee' : 'refusee';
+    setCampagnes(prev => prev.map(c => 
+      c.id === selectedCampagneValidation.id ? { ...c, statut: nouveauStatut } : c
+    ));
+    
+    setIsValidationDialogOpen(false);
+    setSelectedCampagneValidation(null);
   };
 
   const getFilteredCampagnes = () => {
@@ -870,6 +888,15 @@ const Campagnes = () => {
                               </TableCell>
                               <TableCell>
                                 <div className="flex gap-2">
+                                  {campagne.statut === "brouillon" && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleValidation(campagne)}
+                                    >
+                                      <CheckCircle className="h-4 w-4" />
+                                    </Button>
+                                  )}
                                   {campagne.kpi && (
                                     <Button
                                       size="sm"
@@ -905,6 +932,43 @@ const Campagnes = () => {
                 </TabsContent>
               ))}
             </Tabs>
+
+            {/* Dialog Validation */}
+            <Dialog open={isValidationDialogOpen} onOpenChange={setIsValidationDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5" />
+                    Validation de la campagne
+                  </DialogTitle>
+                  <DialogDescription>
+                    Validez ou refusez la campagne "{selectedCampagneValidation?.nom}"
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-medium mb-2">Détails de la campagne</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>Type: {selectedCampagneValidation?.type}</div>
+                      <div>Objectif: {selectedCampagneValidation?.objectifCommercial.objectif} {selectedCampagneValidation?.objectifCommercial.unite}</div>
+                      <div>Début: {selectedCampagneValidation?.dateDebut.toLocaleDateString()}</div>
+                      <div>Fin: {selectedCampagneValidation?.dateFin.toLocaleDateString()}</div>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsValidationDialogOpen(false)}>
+                    Annuler
+                  </Button>
+                  <Button variant="destructive" onClick={() => handleValidationSubmit('refuser')}>
+                    Refuser
+                  </Button>
+                  <Button onClick={() => handleValidationSubmit('valider')}>
+                    Valider
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             {/* Dialog KPI */}
             <Dialog open={isKPIDialogOpen} onOpenChange={setIsKPIDialogOpen}>
