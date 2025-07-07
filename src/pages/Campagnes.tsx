@@ -200,11 +200,9 @@ const BAREMES_EXISTANTS = [
 
 const CANAUX_DIFFUSION = [
   { id: "emailing", nom: "E-mailing", description: "Diffusion par email" },
-  { id: "sms", nom: "SMS", description: "Notifications SMS" },
+  { id: "push-mobile", nom: "Notifications Push", description: "Notifications mobiles sur l'application" },
   { id: "portail-client", nom: "Portail Client", description: "Publication sur le portail client" },
-  { id: "agences", nom: "Agences", description: "Communication en agences" },
-  { id: "commercial", nom: "Force Commerciale", description: "Via l'équipe commerciale" },
-  { id: "reseaux-sociaux", nom: "Réseaux Sociaux", description: "Publication sur les réseaux" }
+  { id: "agences", nom: "Agences", description: "Communication en agences" }
 ];
 
 const Campagnes = () => {
