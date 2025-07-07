@@ -73,6 +73,15 @@ const BAREMES_DEMO: BaremeComplet[] = [
   }
 ];
 
+const TYPES_CRITERES = [
+  "Segment",
+  "Secteur d'activité",
+  "Profession",
+  "Groupe client",
+  "Montant de financement",
+  "Durée de financement"
+];
+
 const CRITERES_PAR_TYPE = {
   segment: ["PME", "Grand Compte", "Corporate", "Particulier", "Micro-entreprise"],
   secteur: ["Agriculture et agroalimentaire", "Transport et logistique", "Industrie manufacturière", "Commerce et distribution", "Services aux entreprises", "BTP et construction", "Santé et services sociaux", "Education et formation", "Technologies et télécommunications", "Tourisme et hôtellerie"],
@@ -103,9 +112,10 @@ const Bareme = () => {
     // Périodicité fixe à mensuel avec modifiable
     periodiciteModifiable: false,
     typeEcheancier: "constant",
-    marge: "",
-    // Premier Loyer Majoré
-    premierLoyerMajore: "",
+    typeEcheancierModifiable: false,
+    // Premier Loyer Majoré avec type et valeur
+    premierLoyerType: "inférieur" as "inférieur" | "supérieur",
+    premierLoyerValeur: "",
     // Valeur résiduelle (standard) ou Valeur de reprise (dérogatoire)
     valeurResiduelleSeuil: "",
     valeurResiduelleType: "inférieur" as "inférieur" | "supérieur",
@@ -113,8 +123,8 @@ const Bareme = () => {
   });
 
   const [conditionForm, setConditionForm] = useState({
-    nom: "",
-    description: ""
+    typeCritere: "",
+    criteres: [] as string[]
   });
 
   const resetBaremeForm = () => {
@@ -131,8 +141,9 @@ const Bareme = () => {
       dureeModifiable: false,
       periodiciteModifiable: false,
       typeEcheancier: "constant",
-      marge: "",
-      premierLoyerMajore: "",
+      typeEcheancierModifiable: false,
+      premierLoyerType: "inférieur",
+      premierLoyerValeur: "",
       valeurResiduelleSeuil: "",
       valeurResiduelleType: "inférieur",
       conditions: []
@@ -141,18 +152,19 @@ const Bareme = () => {
   };
 
   const addCondition = () => {
-    if (conditionForm.nom) {
+    if (conditionForm.typeCritere && conditionForm.criteres.length > 0) {
       const newCondition = {
         id: `cond-${Date.now()}`,
-        ...conditionForm
+        typeCritere: conditionForm.typeCritere,
+        criteres: conditionForm.criteres
       };
       setBaremeForm(prev => ({
         ...prev,
         conditions: [...prev.conditions, newCondition]
       }));
       setConditionForm({
-        nom: "",
-        description: ""
+        typeCritere: "",
+        criteres: []
       });
     }
   };
@@ -170,7 +182,7 @@ const Bareme = () => {
       nom: baremeForm.nom,
       type: baremeForm.type,
       taux: parseFloat(baremeForm.tauxDefaut),
-      marge: parseFloat(baremeForm.marge),
+      marge: 0, // Marge supprimée, mise à 0
       valeurResiduelle: parseFloat(baremeForm.valeurResiduelleSeuil || "0"),
       typologie: baremeForm.typologie,
       conditions: baremeForm.type === "derogatoire" ? baremeForm.conditions : undefined,
@@ -396,39 +408,71 @@ const Bareme = () => {
                       </div>
                       <div>
                         <Label htmlFor="typeEcheancier">Type échéancier</Label>
-                        <Select value={baremeForm.typeEcheancier} onValueChange={(value) => setBaremeForm(prev => ({ ...prev, typeEcheancier: value }))}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="constant">Constant</SelectItem>
-                            <SelectItem value="progressif">Progressif</SelectItem>
-                            <SelectItem value="degressif">Dégressif</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center space-x-4">
+                          <Select value={baremeForm.typeEcheancier} onValueChange={(value) => setBaremeForm(prev => ({ ...prev, typeEcheancier: value }))}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="constant">Constant</SelectItem>
+                              <SelectItem value="progressif">Progressif</SelectItem>
+                              <SelectItem value="degressif">Dégressif</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="typeEcheancierModifiable"
+                              checked={baremeForm.typeEcheancierModifiable}
+                              onCheckedChange={(checked) => setBaremeForm(prev => ({ ...prev, typeEcheancierModifiable: checked as boolean }))}
+                            />
+                            <Label htmlFor="typeEcheancierModifiable" className="text-sm">Modifiable</Label>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
                     {/* Premier Loyer Majoré */}
                     <div>
-                      <Label htmlFor="premierLoyerMajore">Premier Loyer Majoré (%)</Label>
-                      <Input
-                        id="premierLoyerMajore"
-                        type="number"
-                        step="0.1"
-                        value={baremeForm.premierLoyerMajore}
-                        onChange={(e) => setBaremeForm(prev => ({ 
-                          ...prev, 
-                          premierLoyerMajore: e.target.value 
-                        }))}
-                        placeholder="10.0"
-                      />
+                      <Label>Premier Loyer Majoré</Label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm text-muted-foreground">Type</Label>
+                          <Select 
+                            value={baremeForm.premierLoyerType} 
+                            onValueChange={(value: "inférieur" | "supérieur") => setBaremeForm(prev => ({ 
+                              ...prev, 
+                              premierLoyerType: value 
+                            }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="inférieur">Inférieur</SelectItem>
+                              <SelectItem value="supérieur">Supérieur</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-sm text-muted-foreground">Valeur (%)</Label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            value={baremeForm.premierLoyerValeur}
+                            onChange={(e) => setBaremeForm(prev => ({ 
+                              ...prev, 
+                              premierLoyerValeur: e.target.value 
+                            }))}
+                            placeholder="10.0"
+                          />
+                        </div>
+                      </div>
                     </div>
 
                     {/* Valeur résiduelle (standard) ou Valeur de reprise (dérogatoire) */}
                     <div>
                       <Label>
-                        {baremeForm.type === "standard" ? "Valeur résiduelle" : "Valeur de reprise"}
+                        {baremeForm.typologie === "LLD" ? "Valeur de reprise" : "Valeur résiduelle"}
                       </Label>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -465,45 +509,61 @@ const Bareme = () => {
                       </div>
                     </div>
 
-                    {/* Marge */}
-                    <div>
-                      <Label htmlFor="marge">Marge (%)</Label>
-                      <Input
-                        id="marge"
-                        type="number"
-                        step="0.1"
-                        value={baremeForm.marge}
-                        onChange={(e) => setBaremeForm(prev => ({ ...prev, marge: e.target.value }))}
-                        placeholder="3.0"
-                      />
-                    </div>
-
                     {/* Champs spécifiques aux barèmes dérogatoires */}
                     {baremeForm.type === "derogatoire" && (
                       <div className="space-y-4">
-                        {/* Conditions Applicables - Simplifié */}
+                        {/* Conditions Applicables - Modifié */}
                         <div>
                           <Label>Conditions Applicables</Label>
                           <Card className="p-4">
                             <div className="space-y-4">
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                  <Label htmlFor="condNom">Nom de la condition</Label>
-                                  <Input
-                                    id="condNom"
-                                    value={conditionForm.nom}
-                                    onChange={(e) => setConditionForm(prev => ({ ...prev, nom: e.target.value }))}
-                                    placeholder="Ex: Segments Privilégiés"
-                                  />
+                                  <Label htmlFor="typeCritere">Type de critère</Label>
+                                  <Select
+                                    value={conditionForm.typeCritere}
+                                    onValueChange={(value) => setConditionForm(prev => ({ ...prev, typeCritere: value, criteres: [] }))}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Sélectionner un type de critère" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {TYPES_CRITERES.map(type => (
+                                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
                                 </div>
                                 <div>
-                                  <Label htmlFor="condDescription">Description</Label>
-                                  <Textarea
-                                    id="condDescription"
-                                    value={conditionForm.description}
-                                    onChange={(e) => setConditionForm(prev => ({ ...prev, description: e.target.value }))}
-                                    placeholder="Description de la condition..."
-                                  />
+                                  <Label>Critères</Label>
+                                  <div className="space-y-2">
+                                    {conditionForm.typeCritere && (
+                                      <div className="max-h-32 overflow-y-auto border rounded p-2">
+                                        {CRITERES_PAR_TYPE.segment.map(critere => (
+                                          <div key={critere} className="flex items-center space-x-2">
+                                            <Checkbox
+                                              id={`critere-${critere}`}
+                                              checked={conditionForm.criteres.includes(critere)}
+                                              onCheckedChange={(checked) => {
+                                                if (checked) {
+                                                  setConditionForm(prev => ({
+                                                    ...prev,
+                                                    criteres: [...prev.criteres, critere]
+                                                  }));
+                                                } else {
+                                                  setConditionForm(prev => ({
+                                                    ...prev,
+                                                    criteres: prev.criteres.filter(c => c !== critere)
+                                                  }));
+                                                }
+                                              }}
+                                            />
+                                            <Label htmlFor={`critere-${critere}`} className="text-sm">{critere}</Label>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
 
@@ -520,10 +580,14 @@ const Bareme = () => {
                               {baremeForm.conditions.map((condition, index) => (
                                 <div key={index} className="flex items-center justify-between p-2 border rounded">
                                   <div>
-                                    <span className="font-medium">{condition.nom}</span>
-                                    {condition.description && (
-                                      <span className="text-sm text-muted-foreground ml-2">- {condition.description}</span>
-                                    )}
+                                    <span className="font-medium">{condition.typeCritere}</span>
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {condition.criteres.map((critere, i) => (
+                                        <Badge key={i} variant="secondary" className="text-xs">
+                                          {critere}
+                                        </Badge>
+                                      ))}
+                                    </div>
                                   </div>
                                   <Button variant="ghost" size="sm" onClick={() => removeCondition(index)}>
                                     <Trash2 className="h-4 w-4" />
@@ -590,8 +654,9 @@ const Bareme = () => {
                         <TableCell>
                           <div className="text-sm">
                             <div>Taux: {bareme.taux}%</div>
-                            <div>Marge: {bareme.marge}%</div>
-                            <div>VR: {bareme.valeurResiduelle}%</div>
+                            <div>
+                              {bareme.typologie === "LLD" ? "Reprise" : "VR"}: {bareme.valeurResiduelle}%
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -599,7 +664,7 @@ const Bareme = () => {
                             <div className="flex flex-wrap gap-1">
                               {bareme.conditions.map(condition => (
                                 <Badge key={condition.id} variant="outline" className="text-xs">
-                                  {condition.nom}
+                                  {condition.typeCritere}
                                 </Badge>
                               ))}
                             </div>
@@ -705,19 +770,15 @@ const Bareme = () => {
 
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Paramètres Financiers</Label>
-                      <div className="grid grid-cols-3 gap-4 mt-2">
+                      <div className="grid grid-cols-2 gap-4 mt-2">
                         <div className="text-center p-4 bg-blue-50 rounded">
                           <div className="text-2xl font-bold text-blue-600">{viewingBareme.taux}%</div>
                           <div className="text-sm text-muted-foreground">Taux</div>
                         </div>
-                        <div className="text-center p-4 bg-green-50 rounded">
-                          <div className="text-2xl font-bold text-green-600">{viewingBareme.marge}%</div>
-                          <div className="text-sm text-muted-foreground">Marge</div>
-                        </div>
                         <div className="text-center p-4 bg-orange-50 rounded">
                           <div className="text-2xl font-bold text-orange-600">{viewingBareme.valeurResiduelle}%</div>
                           <div className="text-sm text-muted-foreground">
-                            {viewingBareme.typologie === "LLD" ? "Valeur de Reprise" : "1er Loyer Majoré"}
+                            {viewingBareme.typologie === "LLD" ? "Valeur de reprise" : "Valeur résiduelle"}
                           </div>
                         </div>
                       </div>
@@ -732,8 +793,7 @@ const Bareme = () => {
                               <CardContent className="pt-4">
                                 <div className="flex justify-between items-start">
                                   <div>
-                                    <h4 className="font-medium">{condition.nom}</h4>
-                                    <p className="text-sm text-muted-foreground">{condition.description}</p>
+                                    <h4 className="font-medium">{condition.typeCritere}</h4>
                                     <div className="flex flex-wrap gap-1 mt-2">
                                       {condition.criteres.map((critere, index) => (
                                         <Badge key={index} variant="secondary" className="text-xs">
@@ -742,9 +802,6 @@ const Bareme = () => {
                                       ))}
                                     </div>
                                   </div>
-                                  <Badge variant="outline">
-                                    {condition.type.replace('_', ' ')}
-                                  </Badge>
                                 </div>
                               </CardContent>
                             </Card>

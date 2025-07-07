@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import Header from "@/components/Layout/Header";
 import { AppSidebar } from "@/components/Layout/Sidebar";
@@ -10,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Edit, Trash2, Handshake, FileText, Calendar, RefreshCw, XCircle, CheckCircle } from "lucide-react";
+import { Plus, Edit, Trash2, Handshake, FileText, Calendar, RefreshCw, XCircle } from "lucide-react";
 import { Convention, BaremeComplet, CategorieMatriel } from "@/types/leasing";
 import {
   Table,
@@ -149,8 +150,6 @@ const Conventions = () => {
   const [currentTab, setCurrentTab] = useState("actives");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingConvention, setEditingConvention] = useState<Convention | null>(null);
-  const [selectedBaremeId, setSelectedBaremeId] = useState<string>("");
-  const [baremeSelectionMode, setBaremeSelectionMode] = useState<"existing" | "new">("existing");
   const [formData, setFormData] = useState({
     nom: "",
     description: "",
@@ -200,29 +199,10 @@ const Conventions = () => {
       actif: true
     });
     setEditingConvention(null);
-    setSelectedBaremeId("");
-    setBaremeSelectionMode("existing");
-  };
-
-  const handleSelectBareme = (baremeId: string) => {
-    const bareme = BAREMES_DISPONIBLES.find(b => b.id === baremeId);
-    if (bareme) {
-      setSelectedBaremeId(baremeId);
-      setFormData(prev => ({
-        ...prev,
-        taux: bareme.taux.toString(),
-        marge: bareme.marge.toString(),
-        valeurResiduelle: bareme.valeurResiduelle.toString(),
-        typologie: bareme.typologie || "Crédit-Bail",
-        type: bareme.type
-      }));
-    }
   };
 
   const handleEdit = (convention: Convention) => {
     setEditingConvention(convention);
-    setSelectedBaremeId("");
-    setBaremeSelectionMode("existing");
     setFormData({
       nom: convention.nom,
       description: convention.description,
@@ -532,209 +512,136 @@ const Conventions = () => {
                     </TabsContent>
 
                     <TabsContent value="baremes" className="space-y-4">
-                      {/* Mode de sélection */}
-                      <div className="flex gap-2 mb-4">
-                        <Button 
-                          variant={baremeSelectionMode === "existing" ? "default" : "outline"}
-                          onClick={() => setBaremeSelectionMode("existing")}
-                          size="sm"
-                        >
-                          Barème existant
-                        </Button>
-                        <Button
-                          variant={baremeSelectionMode === "new" ? "default" : "outline"}
-                          onClick={() => setBaremeSelectionMode("new")}
-                          size="sm"
-                        >
-                          Nouveau barème
-                        </Button>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="typologie">Typologie *</Label>
+                          <Select value={formData.typologie} onValueChange={(value) => setFormData(prev => ({ ...prev, typologie: value }))}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionner une typologie" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Crédit-Bail">Crédit-Bail</SelectItem>
+                              <SelectItem value="LOA">LOA</SelectItem>
+                              <SelectItem value="LLD">LLD</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="type">Type *</Label>
+                          <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionner un type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="standard">Standard</SelectItem>
+                              <SelectItem value="derogatoire">Dérogatoire</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
 
-                      {baremeSelectionMode === "existing" ? (
-                        <div className="space-y-4">
-                          <div className="text-sm text-muted-foreground">
-                            Sélectionnez un barème existant depuis votre bibliothèque
-                          </div>
-                          <div className="max-h-64 overflow-y-auto space-y-2">
-                            {BAREMES_DISPONIBLES.filter(b => b.actif).map(bareme => (
-                              <div
-                                key={bareme.id}
-                                className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                                  selectedBaremeId === bareme.id
-                                    ? "border-primary bg-primary/5"
-                                    : "border-border hover:border-primary/50"
-                                }`}
-                                onClick={() => handleSelectBareme(bareme.id)}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <h4 className="font-medium">{bareme.nom}</h4>
-                                      {selectedBaremeId === bareme.id && (
-                                        <CheckCircle className="h-4 w-4 text-primary" />
-                                      )}
-                                    </div>
-                                    <div className="flex gap-2 mt-2">
-                                      <Badge variant="outline" className="text-xs">
-                                        Taux: {bareme.taux}%
-                                      </Badge>
-                                      <Badge variant="outline" className="text-xs">
-                                        Marge: {bareme.marge}%
-                                      </Badge>
-                                      <Badge variant="outline" className="text-xs">
-                                        VR: {bareme.valeurResiduelle}%
-                                      </Badge>
-                                      <Badge variant={bareme.type === "standard" ? "default" : "secondary"} className="text-xs">
-                                        {bareme.type}
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {bareme.typologie}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <Label htmlFor="taux">Taux (%)</Label>
+                          <Input
+                            id="taux"
+                            type="number"
+                            step="0.1"
+                            value={formData.taux}
+                            onChange={(e) => setFormData(prev => ({ ...prev, taux: e.target.value }))}
+                            placeholder="6.5"
+                          />
                         </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="text-sm text-muted-foreground">
-                            Créez un nouveau barème personnalisé pour cette convention
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label htmlFor="typologie">Typologie *</Label>
-                              <Select value={formData.typologie} onValueChange={(value) => setFormData(prev => ({ ...prev, typologie: value }))}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Sélectionner une typologie" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Crédit-Bail">Crédit-Bail</SelectItem>
-                                  <SelectItem value="LOA">LOA</SelectItem>
-                                  <SelectItem value="LLD">LLD</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label htmlFor="type">Type *</Label>
-                              <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Sélectionner un type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="standard">Standard</SelectItem>
-                                  <SelectItem value="derogatoire">Dérogatoire</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
+                        <div>
+                          <Label htmlFor="duree">Durée (mois)</Label>
+                          <Input
+                            id="duree"
+                            type="number"
+                            value={formData.duree}
+                            onChange={(e) => setFormData(prev => ({ ...prev, duree: e.target.value }))}
+                            placeholder="36"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="periodicite">Périodicité</Label>
+                          <Select value={formData.periodicite} onValueChange={(value) => setFormData(prev => ({ ...prev, periodicite: value }))}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionner" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="mensuelle">Mensuelle</SelectItem>
+                              <SelectItem value="trimestrielle">Trimestrielle</SelectItem>
+                              <SelectItem value="semestrielle">Semestrielle</SelectItem>
+                              <SelectItem value="annuelle">Annuelle</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
 
-                          <div className="grid grid-cols-3 gap-4">
-                            <div>
-                              <Label htmlFor="taux">Taux (%)</Label>
-                              <Input
-                                id="taux"
-                                type="number"
-                                step="0.1"
-                                value={formData.taux}
-                                onChange={(e) => setFormData(prev => ({ ...prev, taux: e.target.value }))}
-                                placeholder="6.5"
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor="duree">Durée (mois)</Label>
-                              <Input
-                                id="duree"
-                                type="number"
-                                value={formData.duree}
-                                onChange={(e) => setFormData(prev => ({ ...prev, duree: e.target.value }))}
-                                placeholder="36"
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor="periodicite">Périodicité</Label>
-                              <Select value={formData.periodicite} onValueChange={(value) => setFormData(prev => ({ ...prev, periodicite: value }))}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Sélectionner" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="mensuelle">Mensuelle</SelectItem>
-                                  <SelectItem value="trimestrielle">Trimestrielle</SelectItem>
-                                  <SelectItem value="semestrielle">Semestrielle</SelectItem>
-                                  <SelectItem value="annuelle">Annuelle</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <Label htmlFor="typeEcheancier">Type échéancier</Label>
+                          <Select value={formData.typeEcheancier} onValueChange={(value) => setFormData(prev => ({ ...prev, typeEcheancier: value }))}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionner" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="constant">Constant</SelectItem>
+                              <SelectItem value="progressif">Progressif</SelectItem>
+                              <SelectItem value="degressif">Dégressif</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="valeurResiduelle">
+                            {formData.typologie === "LLD" ? "Valeur de reprise (%)" : "Valeur résiduelle (%)"}
+                          </Label>
+                          <Input
+                            id="valeurResiduelle"
+                            type="number"
+                            step="0.1"
+                            value={formData.typologie === "LLD" ? formData.valeurReprise : formData.valeurResiduelle}
+                            onChange={(e) => setFormData(prev => ({ 
+                              ...prev, 
+                              [formData.typologie === "LLD" ? "valeurReprise" : "valeurResiduelle"]: e.target.value 
+                            }))}
+                            placeholder="1.8"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="marge">Marge (%)</Label>
+                          <Input
+                            id="marge"
+                            type="number"
+                            step="0.1"
+                            value={formData.marge}
+                            onChange={(e) => setFormData(prev => ({ ...prev, marge: e.target.value }))}
+                            placeholder="2.8"
+                          />
+                        </div>
+                      </div>
 
-                          <div className="grid grid-cols-3 gap-4">
-                            <div>
-                              <Label htmlFor="typeEcheancier">Type échéancier</Label>
-                              <Select value={formData.typeEcheancier} onValueChange={(value) => setFormData(prev => ({ ...prev, typeEcheancier: value }))}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Sélectionner" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="constant">Constant</SelectItem>
-                                  <SelectItem value="progressif">Progressif</SelectItem>
-                                  <SelectItem value="degressif">Dégressif</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label htmlFor="valeurResiduelle">
-                                {formData.typologie === "LLD" ? "Valeur de reprise (%)" : "Valeur résiduelle (%)"}
-                              </Label>
-                              <Input
-                                id="valeurResiduelle"
-                                type="number"
-                                step="0.1"
-                                value={formData.typologie === "LLD" ? formData.valeurReprise : formData.valeurResiduelle}
-                                onChange={(e) => setFormData(prev => ({ 
-                                  ...prev, 
-                                  [formData.typologie === "LLD" ? "valeurReprise" : "valeurResiduelle"]: e.target.value 
-                                }))}
-                                placeholder="1.8"
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor="marge">Marge (%)</Label>
-                              <Input
-                                id="marge"
-                                type="number"
-                                step="0.1"
-                                value={formData.marge}
-                                onChange={(e) => setFormData(prev => ({ ...prev, marge: e.target.value }))}
-                                placeholder="2.8"
-                              />
-                            </div>
+                      {formData.type === "derogatoire" && (
+                        <div>
+                          <Label>1er loyer majoré</Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Select value={formData.premierLoyerType} onValueChange={(value) => setFormData(prev => ({ ...prev, premierLoyerType: value }))}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="sup">Supérieur à</SelectItem>
+                                <SelectItem value="inf">Inférieur à</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={formData.premierLoyerMajore}
+                              onChange={(e) => setFormData(prev => ({ ...prev, premierLoyerMajore: e.target.value }))}
+                              placeholder="Valeur"
+                            />
                           </div>
-
-                          {formData.type === "derogatoire" && (
-                            <div>
-                              <Label>1er loyer majoré</Label>
-                              <div className="grid grid-cols-2 gap-2">
-                                <Select value={formData.premierLoyerType} onValueChange={(value) => setFormData(prev => ({ ...prev, premierLoyerType: value }))}>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="sup">Supérieur à</SelectItem>
-                                    <SelectItem value="inf">Inférieur à</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <Input
-                                  type="number"
-                                  step="0.1"
-                                  value={formData.premierLoyerMajore}
-                                  onChange={(e) => setFormData(prev => ({ ...prev, premierLoyerMajore: e.target.value }))}
-                                  placeholder="Valeur"
-                                />
-                              </div>
-                            </div>
-                          )}
                         </div>
                       )}
                     </TabsContent>

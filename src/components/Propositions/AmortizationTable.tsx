@@ -1,5 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -8,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Calculator } from "lucide-react";
+import { Calculator, Save, Send } from "lucide-react";
 
 interface AmortizationRowProps {
   echeance: number;
@@ -24,13 +25,17 @@ interface AmortizationTableProps {
   duree?: number;
   taux?: number;
   className?: string;
+  onSaveDraft?: () => void;
+  onSendForValidation?: () => void;
 }
 
 const AmortizationTable = ({ 
   montant = 50000000, 
-  duree = 24, // 24 mois par défaut (2 ans)
+  duree = 36,
   taux = 7.5,
-  className 
+  className,
+  onSaveDraft,
+  onSendForValidation
 }: AmortizationTableProps) => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -38,7 +43,7 @@ const AmortizationTable = ({
       currency: 'XOF',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(amount);
+    }).format(amount).replace('XOF', 'FCFA');
   };
 
   const calculateAmortization = (): AmortizationRowProps[] => {
@@ -60,7 +65,7 @@ const AmortizationTable = ({
         capitalRemb: principal,
         interet: interest,
         annuite: monthlyPayment,
-        capitalRestantDu: newRemainingCapital
+        capitalRestantDu: Math.max(0, newRemainingCapital)
       });
 
       remainingCapital = newRemainingCapital;
@@ -147,6 +152,18 @@ const AmortizationTable = ({
             Affichage des 4 premières échéances sur {duree} au total
           </p>
         )}
+
+        {/* Boutons d'action */}
+        <div className="flex gap-4 justify-center pt-4">
+          <Button variant="outline" onClick={onSaveDraft} className="flex items-center gap-2">
+            <Save className="h-4 w-4" />
+            Sauvegarder en brouillon
+          </Button>
+          <Button onClick={onSendForValidation} className="flex items-center gap-2 bg-dark">
+            <Send className="h-4 w-4" />
+            Envoyer pour validation
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

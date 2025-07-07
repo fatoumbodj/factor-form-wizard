@@ -45,9 +45,10 @@ export interface BaremeStandard {
 
 export interface ConditionBareme {
   id: string;
-  nom: string;
-  type: "segment" | "secteur" | "profession" | "groupe_client";
+  typeCritere: string;
   criteres: string[];
+  nom?: string;
+  type?: "segment" | "secteur" | "profession" | "groupe_client";
   description?: string;
 }
 

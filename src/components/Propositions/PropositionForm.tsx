@@ -1,11 +1,20 @@
+
 import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TypeProposition, Convention, Campagne, BaremeComplet } from "@/types/leasing";
+import { Calculator, User, Package, FileText, Settings } from "lucide-react";
+import LeasingTypeSelectorEnhanced from "./LeasingTypeSelectorEnhanced";
+import ConventionSelector from "./ConventionSelector";
+import CampagneSelector from "./CampagneSelector";
+import LeasingTypeSection from "./LeasingTypeSection";
+import MaterialManager from "./MaterialManager";
+import PrestationsManager from "./PrestationsManager";
+import AmortizationTable from "./AmortizationTable";
+import ClientInfoSection from "./ClientInfoSection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Select, 
   SelectContent, 
@@ -13,29 +22,46 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import LeasingTypeSelectorEnhanced from "./LeasingTypeSelectorEnhanced";
-import ConventionSelector from "./ConventionSelector";
-import CampagneSelector from "./CampagneSelector";
-import AmortizationTable from "./AmortizationTable";
-import { TypeProposition, Convention, Campagne, BaremeComplet } from "@/types/leasing";
-import { Calculator, User, Package, FileText, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface ClientInfo {
   type: "client" | "prospect";
   codeClient?: string;
   nom: string;
+  prenom?: string;
   adresse: string;
   telephone: string;
   email: string;
-  typeClient: "particulier" | "entreprise" | "association";
+  dateNaissance?: string;
+  categorieJuridique?: string;
+  secteurActivite?: string;
+  identifiantNational?: string;
 }
 
-interface MaterialInfo {
-  designation: string;
-  prixHT: number;
-  tva: number;
-  categorie: string;
+interface LeasingTypeData {
+  libelleProduit: string;
+  codeProduit: string;
+  agence: string;
+  dateDemande: string;
+  dateMiseEnServiceProvisionnelle: string;
+}
+
+interface MaterialItem {
+  id: string;
+  type: "materiel" | "composant";
   fournisseur: string;
+  reference: string;
+  designation: string;
+  categorie: string;
+  montantHT: number;
+  taux: number;
+  qte: number;
+}
+
+interface PrestationsData {
+  fraisAssurance: number;
+  fraisDossier: number;
+  fraisTimbre: number;
 }
 
 interface CalculationInfo {
@@ -49,19 +75,27 @@ interface CalculationInfo {
 const CLIENTS_DEMO = [
   {
     codeClient: "CLI001",
-    nom: "Société DIALLO & Frères",
+    nom: "DIALLO",
+    prenom: "Mamadou",
     adresse: "Rue 15, Dakar",
     telephone: "77 123 45 67",
-    email: "contact@diallo-freres.sn",
-    typeClient: "entreprise" as const
+    email: "mamadou.diallo@email.com",
+    dateNaissance: "1985-05-15",
+    categorieJuridique: "Particulier",
+    secteurActivite: "Commerce",
+    identifiantNational: "123456789"
   },
   {
     codeClient: "CLI002", 
-    nom: "Mamadou FALL",
+    nom: "FALL",
+    prenom: "Aminata",
     adresse: "Avenue Cheikh Anta Diop, Dakar",
     telephone: "76 987 65 43",
-    email: "mamadou.fall@email.com",
-    typeClient: "particulier" as const
+    email: "aminata.fall@email.com",
+    dateNaissance: "1990-08-22",
+    categorieJuridique: "Particulier",
+    secteurActivite: "Services",
+    identifiantNational: "987654321"
   }
 ];
 
@@ -94,25 +128,28 @@ const BAREMES_DEMO: BaremeComplet[] = [
 const defaultClientInfo: ClientInfo = {
   type: "prospect",
   nom: "",
+  prenom: "",
   adresse: "",
   telephone: "",
   email: "",
-  typeClient: "particulier"
+  dateNaissance: "",
+  categorieJuridique: "",
+  secteurActivite: "",
+  identifiantNational: ""
 };
 
-const defaultMaterialInfo: MaterialInfo = {
-  designation: "",
-  prixHT: 0,
-  tva: 0,
-  categorie: "",
-  fournisseur: ""
+const defaultLeasingTypeData: LeasingTypeData = {
+  libelleProduit: "credit-bail",
+  codeProduit: "CB 001",
+  agence: "",
+  dateDemande: new Date().toISOString().split('T')[0],
+  dateMiseEnServiceProvisionnelle: ""
 };
 
-const defaultCalculationInfo: CalculationInfo = {
-  duree: 36,
-  apport: 0,
-  frequencePaiement: "mensuel",
-  bareme: ""
+const defaultPrestationsData: PrestationsData = {
+  fraisAssurance: 0,
+  fraisDossier: 0,
+  fraisTimbre: 0
 };
 
 const PropositionForm = () => {
@@ -122,12 +159,18 @@ const PropositionForm = () => {
   const [selectedCampagne, setSelectedCampagne] = useState<Campagne | null>(null);
   
   const [clientInfo, setClientInfo] = useState<ClientInfo>(defaultClientInfo);
-  const [materialInfo, setMaterialInfo] = useState<MaterialInfo>(defaultMaterialInfo);
-  const [calculationInfo, setCalculationInfo] = useState<CalculationInfo>(defaultCalculationInfo);
-  const [prestations, setPrestations] = useState<string[]>([]);
+  
+  const [leasingTypeData, setLeasingTypeData] = useState<LeasingTypeData>(defaultLeasingTypeData);
+  const [materials, setMaterials] = useState<MaterialItem[]>([]);
+  const [selectedFournisseurs, setSelectedFournisseurs] = useState<string[]>([]);
+  const [prestations, setPrestations] = useState<PrestationsData>(defaultPrestationsData);
+  const [calculationInfo, setCalculationInfo] = useState<CalculationInfo>({
+    duree: 36,
+    apport: 0,
+    frequencePaiement: "mensuel",
+    bareme: ""
+  });
   const [showAmortization, setShowAmortization] = useState(false);
-  const [searchClientCode, setSearchClientCode] = useState("");
-  const [isClientReadonly, setIsClientReadonly] = useState(false);
 
   const handleTypePropositionSelect = (type: TypeProposition | "classique") => {
     setTypeProposition(type);
@@ -151,32 +194,6 @@ const PropositionForm = () => {
     setCurrentStep(3);
   };
 
-  const handleSearchClient = () => {
-    const client = CLIENTS_DEMO.find(c => c.codeClient === searchClientCode);
-    if (client) {
-      setClientInfo({
-        type: "client",
-        codeClient: client.codeClient,
-        nom: client.nom,
-        adresse: client.adresse,
-        telephone: client.telephone,
-        email: client.email,
-        typeClient: client.typeClient
-      });
-      setIsClientReadonly(true);
-    }
-  };
-
-  const handleClientTypeChange = (type: "client" | "prospect") => {
-    if (type === "prospect") {
-      setClientInfo(defaultClientInfo);
-      setIsClientReadonly(false);
-      setSearchClientCode("");
-    } else {
-      setClientInfo(prev => ({ ...prev, type }));
-    }
-  };
-
   const getAvailableBaremes = () => {
     if (typeProposition === "classique") {
       // Pour le type classique, d'abord les barèmes standard, puis dérogatoires si client a accès
@@ -184,7 +201,7 @@ const PropositionForm = () => {
       const derogatoireBaremes = BAREMES_DEMO.filter(b => b.type === "derogatoire");
       
       // Logique pour déterminer si le client a accès aux barèmes dérogatoires
-      const clientHasDerogatory = clientInfo.typeClient === "entreprise"; // exemple
+      const clientHasDerogatory = clientInfo.categorieJuridique === "Entreprise"; // exemple
       
       return clientHasDerogatory ? [...standardBaremes, ...derogatoireBaremes] : standardBaremes;
     } else if (typeProposition === "convention") {
@@ -205,25 +222,19 @@ const PropositionForm = () => {
     return BAREMES_DEMO;
   };
 
-  const handleClientInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { id, value } = e.target;
-    setClientInfo(prev => ({ ...prev, [id]: value }));
-  };
-
-  const handleMaterialInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    const parsedValue = parseFloat(value);
-    setMaterialInfo(prev => ({ ...prev, [id]: isNaN(parsedValue) ? 0 : parsedValue }));
-  };
-
-  const handleCalculationInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    const parsedValue = parseInt(value, 10);
-    setCalculationInfo(prev => ({ ...prev, [id]: isNaN(parsedValue) ? 0 : parsedValue }));
-  };
-
-  const handleFrequencyChange = (value: "mensuel" | "trimestriel" | "annuel") => {
-    setCalculationInfo(prev => ({ ...prev, frequencePaiement: value }));
+  const getAvailableFournisseurs = () => {
+    if (typeProposition === "convention" && selectedConvention) {
+      return selectedConvention.fournisseurs || [];
+    } else if (typeProposition === "campagne" && selectedCampagne) {
+      return selectedCampagne.fournisseurs || [];
+    }
+    // Pour type classique, tous les fournisseurs
+    return [
+      "Sonacos",
+      "Senegal-Auto", 
+      "Babacar & Fils",
+      "Afrique Matériel"
+    ];
   };
 
   const renderStepContent = () => {
@@ -242,336 +253,205 @@ const PropositionForm = () => {
           return (
             <ConventionSelector
               selectedConvention={selectedConvention}
-              onConventionSelect={(convention) => {
-                setSelectedConvention(convention);
-                setCurrentStep(3);
-              }}
+              onConventionSelect={handleConventionSelect}
             />
           );
         } else if (typeProposition === "campagne") {
           return (
             <CampagneSelector
               selectedCampagne={selectedCampagne}
-              onCampagneSelect={(campagne) => {
-                setSelectedCampagne(campagne);
-                setCurrentStep(3);
-              }}
+              onCampagneSelect={handleCampagneSelect}
             />
           );
         } else {
-          // Type standard - passer directement à l'étape 3
           setCurrentStep(3);
           return null;
         }
 
       case 3:
         return (
-          <Tabs defaultValue="client" className="w-full">
-            <TabsList>
-              <TabsTrigger value="client">
-                <User className="h-4 w-4 mr-2" />
-                Client
-              </TabsTrigger>
-              <TabsTrigger value="materials">
-                <Package className="h-4 w-4 mr-2" />
-                Produit
-              </TabsTrigger>
-              <TabsTrigger value="calculation">
-                <Calculator className="h-4 w-4 mr-2" />
-                Barème
-              </TabsTrigger>
-              <TabsTrigger value="prestations">
-                <FileText className="h-4 w-4 mr-2" />
-                Prestations
-              </TabsTrigger>
-              <TabsTrigger value="amortissement">
-                <Calculator className="h-4 w-4 mr-2" />
-                Amortissement
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="client">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Informations Client</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Type de client : Client ou Prospect */}
-                  <div>
-                    <Label>Type</Label>
-                    <div className="flex gap-2 mt-2">
-                      <Button 
-                        variant={clientInfo.type === "client" ? "default" : "outline"}
-                        onClick={() => handleClientTypeChange("client")}
-                      >
-                        Client
-                      </Button>
-                      <Button
-                        variant={clientInfo.type === "prospect" ? "default" : "outline"}
-                        onClick={() => handleClientTypeChange("prospect")}
-                      >
-                        Prospect
-                      </Button>
+          <div className="space-y-6">
+            {/* Navigation par étapes */}
+            <div className="flex justify-center mb-8">
+              <div className="flex items-center space-x-2">
+                {[
+                  { num: 1, label: "Client", icon: User },
+                  { num: 2, label: "Produit", icon: Settings },
+                  { num: 3, label: "Matériel", icon: Package },
+                  { num: 4, label: "Barèmes", icon: Calculator },
+                  { num: 5, label: "Prestations", icon: FileText },
+                  { num: 6, label: "Amortissement", icon: Calculator }
+                ].map((step, index) => (
+                  <div key={step.num} className="flex items-center">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">
+                        {step.num}
+                      </div>
+                      <span className="ml-2 text-sm font-medium text-gray-900">{step.label}</span>
                     </div>
+                    {index < 5 && <div className="w-8 h-px bg-gray-300 mx-4"></div>}
                   </div>
+                ))}
+              </div>
+            </div>
+            
+            <Tabs defaultValue="client" className="w-full">
+              <TabsList>
+                <TabsTrigger value="client">
+                  <User className="h-4 w-4 mr-2" />
+                  1. Client
+                </TabsTrigger>
+                <TabsTrigger value="produit">
+                  <Settings className="h-4 w-4 mr-2" />
+                  2. Produit
+                </TabsTrigger>
+                <TabsTrigger value="materials">
+                  <Package className="h-4 w-4 mr-2" />
+                  3. Matériel
+                </TabsTrigger>
+                <TabsTrigger value="bareme">
+                  <Calculator className="h-4 w-4 mr-2" />
+                  4. Barème
+                </TabsTrigger>
+                <TabsTrigger value="prestations">
+                  <FileText className="h-4 w-4 mr-2" />
+                  5. Prestations
+                </TabsTrigger>
+                <TabsTrigger value="amortissement">
+                  <Calculator className="h-4 w-4 mr-2" />
+                  6. Amortissement
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="client">
+                <ClientInfoSection
+                  clientInfo={clientInfo}
+                  onClientInfoChange={setClientInfo}
+                  clientsDemo={CLIENTS_DEMO}
+                />
+              </TabsContent>
 
-                  {/* Recherche client si type = client */}
-                  {clientInfo.type === "client" && (
+              <TabsContent value="produit">
+                <LeasingTypeSection 
+                  data={leasingTypeData}
+                  onDataChange={setLeasingTypeData}
+                />
+              </TabsContent>
+              
+              <TabsContent value="materials">
+                <MaterialManager
+                  materials={materials}
+                  onMaterialsChange={setMaterials}
+                  selectedFournisseurs={selectedFournisseurs}
+                  onFournisseursChange={setSelectedFournisseurs}
+                  availableFournisseurs={getAvailableFournisseurs()}
+                  typeProposition={typeProposition}
+                  selectedConvention={selectedConvention}
+                  selectedCampagne={selectedCampagne}
+                />
+              </TabsContent>
+              
+              <TabsContent value="bareme">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Barème & Calculs</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     <div>
-                      <Label htmlFor="searchClient">Code Client</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="searchClient"
-                          value={searchClientCode}
-                          onChange={(e) => setSearchClientCode(e.target.value)}
-                          placeholder="Saisir le code client"
+                      <Label htmlFor="bareme">Barème à appliquer</Label>
+                      <Select value={calculationInfo.bareme} onValueChange={(value) => setCalculationInfo(prev => ({ ...prev, bareme: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un barème" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getAvailableBaremes().map(bareme => (
+                            <SelectItem key={bareme.id} value={bareme.id}>
+                              {bareme.nom} ({bareme.type})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="duree">Durée (mois)</Label>
+                        <Input 
+                          type="number" 
+                          id="duree" 
+                          value={calculationInfo.duree} 
+                          onChange={(e) => setCalculationInfo(prev => ({ ...prev, duree: parseInt(e.target.value) || 0 }))}
                         />
-                        <Button onClick={handleSearchClient} variant="outline">
-                          <Search className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <Label htmlFor="apport">Apport (%)</Label>
+                        <Input 
+                          type="number" 
+                          id="apport" 
+                          value={calculationInfo.apport} 
+                          onChange={(e) => setCalculationInfo(prev => ({ ...prev, apport: parseInt(e.target.value) || 0 }))}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Fréquence de Paiement</Label>
+                      <div className="flex gap-2 mt-2">
+                        <Button 
+                          variant={calculationInfo.frequencePaiement === "mensuel" ? "default" : "outline"}
+                          onClick={() => setCalculationInfo(prev => ({ ...prev, frequencePaiement: "mensuel" }))}
+                        >
+                          Mensuel
+                        </Button>
+                        <Button
+                          variant={calculationInfo.frequencePaiement === "trimestriel" ? "default" : "outline"}
+                          onClick={() => setCalculationInfo(prev => ({ ...prev, frequencePaiement: "trimestriel" }))}
+                        >
+                          Trimestriel
+                        </Button>
+                        <Button
+                          variant={calculationInfo.frequencePaiement === "annuel" ? "default" : "outline"}
+                          onClick={() => setCalculationInfo(prev => ({ ...prev, frequencePaiement: "annuel" }))}
+                        >
+                          Annuel
                         </Button>
                       </div>
                     </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="nom">Nom du Client</Label>
-                      <Input 
-                        type="text" 
-                        id="nom" 
-                        value={clientInfo.nom} 
-                        onChange={handleClientInfoChange}
-                        readOnly={isClientReadonly}
-                        className={isClientReadonly ? "bg-gray-100" : ""}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="typeClient">Type de Client</Label>
-                      <Select 
-                        value={clientInfo.typeClient} 
-                        onValueChange={(value: "particulier" | "entreprise" | "association") => setClientInfo(prev => ({ ...prev, typeClient: value }))}
-                        disabled={isClientReadonly}
-                      >
-                        <SelectTrigger className={isClientReadonly ? "bg-gray-100" : ""}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="particulier">Particulier</SelectItem>
-                          <SelectItem value="entreprise">Entreprise</SelectItem>
-                          <SelectItem value="association">Association</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="adresse">Adresse</Label>
-                    <Textarea 
-                      id="adresse" 
-                      value={clientInfo.adresse} 
-                      onChange={handleClientInfoChange}
-                      readOnly={isClientReadonly}
-                      className={isClientReadonly ? "bg-gray-100" : ""}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="telephone">Téléphone</Label>
-                      <Input 
-                        type="tel" 
-                        id="telephone" 
-                        value={clientInfo.telephone} 
-                        onChange={handleClientInfoChange}
-                        readOnly={false} // Toujours modifiable
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email</Label>
-                      <Input 
-                        type="email" 
-                        id="email" 
-                        value={clientInfo.email} 
-                        onChange={handleClientInfoChange}
-                        readOnly={false} // Toujours modifiable
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="materials">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Informations Matériel & Produit</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="designation">Désignation du Matériel</Label>
-                    <Input type="text" id="designation" value={materialInfo.designation} onChange={(e) => setMaterialInfo(prev => ({ ...prev, designation: e.target.value }))} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="categorie">Catégorie</Label>
-                      <Select value={materialInfo.categorie} onValueChange={(value) => setMaterialInfo(prev => ({ ...prev, categorie: value }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner une catégorie" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="vehicules">Véhicules</SelectItem>
-                          <SelectItem value="materiels-industriels">Matériels Industriels</SelectItem>
-                          <SelectItem value="equipements-bureautique">Équipements Bureautique</SelectItem>
-                          <SelectItem value="equipements-medicaux">Équipements Médicaux</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="fournisseur">Fournisseur</Label>
-                      <Select value={materialInfo.fournisseur} onValueChange={(value) => setMaterialInfo(prev => ({ ...prev, fournisseur: value }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner un fournisseur" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="babacar-fils">Babacar & Fils</SelectItem>
-                          <SelectItem value="senegal-auto">Sénégal Auto</SelectItem>
-                          <SelectItem value="sonacos">Sonacos</SelectItem>
-                          <SelectItem value="afrique-materiel">Afrique Matériel</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="prixHT">Prix HT</Label>
-                      <Input type="number" id="prixHT" value={materialInfo.prixHT} onChange={handleMaterialInfoChange} />
-                    </div>
-                    <div>
-                      <Label htmlFor="tva">TVA (%)</Label>
-                      <Input type="number" id="tva" value={materialInfo.tva} onChange={handleMaterialInfoChange} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="calculation">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Barème & Calculs</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="bareme">Barème à appliquer</Label>
-                    <Select value={calculationInfo.bareme} onValueChange={(value) => setCalculationInfo(prev => ({ ...prev, bareme: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un barème" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getAvailableBaremes().map(bareme => (
-                          <SelectItem key={bareme.id} value={bareme.id}>
-                            {bareme.nom} ({bareme.type})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="duree">Durée (mois)</Label>
-                      <Input type="number" id="duree" value={calculationInfo.duree} onChange={handleCalculationInfoChange} />
-                    </div>
-                    <div>
-                      <Label htmlFor="apport">Apport (%)</Label>
-                      <Input type="number" id="apport" value={calculationInfo.apport} onChange={handleCalculationInfoChange} />
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Fréquence de Paiement</Label>
-                    <div className="flex gap-2 mt-2">
-                      <Button 
-                        variant={calculationInfo.frequencePaiement === "mensuel" ? "default" : "outline"}
-                        onClick={() => handleFrequencyChange("mensuel")}
-                      >
-                        Mensuel
-                      </Button>
-                      <Button
-                        variant={calculationInfo.frequencePaiement === "trimestriel" ? "default" : "outline"}
-                        onClick={() => handleFrequencyChange("trimestriel")}
-                      >
-                        Trimestriel
-                      </Button>
-                      <Button
-                        variant={calculationInfo.frequencePaiement === "annuel" ? "default" : "outline"}
-                        onClick={() => handleFrequencyChange("annuel")}
-                      >
-                        Annuel
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="prestations">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Prestations Complémentaires</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Services inclus</Label>
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      {["Assurance", "Maintenance", "Extension de garantie", "Formation", "Installation", "Support technique"].map(prestation => (
-                        <div key={prestation} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id={prestation}
-                            checked={prestations.includes(prestation)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setPrestations([...prestations, prestation]);
-                              } else {
-                                setPrestations(prestations.filter(p => p !== prestation));
-                              }
-                            }}
-                          />
-                          <Label htmlFor={prestation}>{prestation}</Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="amortissement">
-              {showAmortization ? (
-                <AmortizationTable 
-                  montant={materialInfo.prixHT + (materialInfo.prixHT * materialInfo.tva / 100)}
-                  duree={calculationInfo.duree}
-                  taux={7.5}
-                  className="w-full"
-                />
-              ) : (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Tableau d'Amortissement</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <p className="text-muted-foreground">
-                        Générez le tableau d'amortissement basé sur vos paramètres de financement.
-                      </p>
-                      <Button onClick={() => setShowAmortization(true)}>
-                        Générer le tableau d'amortissement
-                      </Button>
-                    </div>
                   </CardContent>
                 </Card>
-              )}
-            </TabsContent>
-          </Tabs>
+              </TabsContent>
+              
+              <TabsContent value="prestations">
+                <PrestationsManager
+                  prestations={prestations}
+                  onPrestationsChange={setPrestations}
+                />
+              </TabsContent>
+              
+              <TabsContent value="amortissement">
+                {showAmortization ? (
+                  <AmortizationTable 
+                    montant={materials.reduce((sum, m) => sum + (m.montantHT * m.qte), 0)}
+                    duree={calculationInfo.duree}
+                    taux={7.5}
+                    onSaveDraft={() => console.log("Sauvegarder en brouillon")}
+                    onSendForValidation={() => console.log("Envoyer pour validation")}
+                    className="w-full"
+                  />
+                ) : (
+                  <div className="text-center p-8">
+                    <p className="text-muted-foreground mb-4">
+                      Complétez les informations matériel et barème pour générer le tableau d'amortissement.
+                    </p>
+                    <button 
+                      onClick={() => setShowAmortization(true)}
+                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                    >
+                      Générer le tableau d'amortissement
+                    </button>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
         );
 
       default:
