@@ -27,10 +27,8 @@ import {
   Search, 
   ChevronDown, 
   ChevronRight,
-  Trash2,
   Eye,
   ToggleLeft,
-  ToggleRight,
   Download
 } from "lucide-react";
 import { MaterialData, ComponentData } from "@/types/material";
@@ -47,6 +45,7 @@ const MaterialTableManager = ({
   const [expandedMaterials, setExpandedMaterials] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showComponentForm, setShowComponentForm] = useState<string | null>(null);
   const [newMaterial, setNewMaterial] = useState({
     fournisseur: "",
     reference: "",
@@ -54,6 +53,13 @@ const MaterialTableManager = ({
     categorie: "",
     montantHT: 0,
     tva: 18
+  });
+  const [newComponent, setNewComponent] = useState({
+    designation: "",
+    familleComposant: "",
+    marque: "",
+    modele: "",
+    valeurHT: 0
   });
 
   const toggleMaterialExpansion = (materialId: string) => {
@@ -104,8 +110,48 @@ const MaterialTableManager = ({
     setShowAddForm(false);
   };
 
-  const handleRemoveMaterial = (materialId: string) => {
-    onMaterialsChange(materials.filter(m => m.id !== materialId));
+  const handleAddComponent = (materialId: string) => {
+    if (!newComponent.designation || !newComponent.familleComposant) {
+      return;
+    }
+
+    const component: ComponentData = {
+      id: Date.now().toString(),
+      numeroComposant: `COMP-${Date.now()}`,
+      designation: newComponent.designation,
+      familleComposant: newComponent.familleComposant,
+      marque: newComponent.marque || "Non spécifié",
+      modele: newComponent.modele || "Non spécifié",
+      anneeFabrication: new Date().getFullYear(),
+      dateMiseEnService: new Date().toISOString().split('T')[0],
+      dureeUtilisationEstimee: "",
+      dureeUtilisationType: "heures",
+      fournisseur: "Non spécifié",
+      dateAcquisition: new Date().toISOString().split('T')[0],
+      valeurInitialeHT: newComponent.valeurHT,
+      valeurInitialeTTC: newComponent.valeurHT * 1.18,
+      materielParentId: materialId
+    };
+
+    const updatedMaterials = materials.map(material => {
+      if (material.id === materialId) {
+        return {
+          ...material,
+          composants: [...(material.composants || []), component]
+        };
+      }
+      return material;
+    });
+
+    onMaterialsChange(updatedMaterials);
+    setNewComponent({
+      designation: "",
+      familleComposant: "",
+      marque: "",
+      modele: "",
+      valeurHT: 0
+    });
+    setShowComponentForm(null);
   };
 
   const filteredMaterials = materials.filter(material =>
@@ -116,59 +162,58 @@ const MaterialTableManager = ({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
+        <CardHeader className="bg-purple-600 text-white">
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Matériel et Composants à financer
+            Matériel
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="materials" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="materials">Tout</TabsTrigger>
-              <TabsTrigger value="active">Actif</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="materials" className="space-y-4">
-              {/* Barre d'actions */}
-              <div className="flex items-center justify-between">
+        <CardContent className="p-0">
+          <Tabs defaultValue="tout" className="w-full">
+            <div className="border-b bg-purple-50">
+              <div className="flex items-center justify-between p-4">
+                <TabsList className="bg-white">
+                  <TabsTrigger value="tout" className="text-purple-600">Tout</TabsTrigger>
+                  <TabsTrigger value="active" className="text-purple-600">Active</TabsTrigger>
+                  <TabsTrigger value="inactive" className="text-purple-600">Inactive</TabsTrigger>
+                </TabsList>
+                
                 <div className="flex items-center gap-2">
                   <Button 
                     onClick={() => setShowAddForm(!showAddForm)}
-                    className="bg-purple-600 hover:bg-purple-700"
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add New Matériel
                   </Button>
-                  <Button variant="outline">
+                  <Button variant="outline" className="border-gray-300">
                     <Download className="h-4 w-4 mr-2" />
                     Export
                   </Button>
-                </div>
-                <div className="relative">
-                  <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-64"
-                  />
+                  <div className="relative">
+                    <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 w-64"
+                    />
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {/* Formulaire d'ajout */}
+            <TabsContent value="tout" className="space-y-0 m-0">
+              {/* Formulaire d'ajout matériel */}
               {showAddForm && (
-                <Card className="border-2 border-blue-200">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Ajouter un nouveau matériel</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border-b bg-blue-50 p-4">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <Label>Fournisseur</Label>
                         <Select value={newMaterial.fournisseur} onValueChange={(value) => setNewMaterial(prev => ({ ...prev, fournisseur: value }))}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Sénégal-Auto" />
+                            <SelectValue placeholder="Choisir un fournisseur" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="senegal-auto">Sénégal-Auto</SelectItem>
@@ -178,9 +223,22 @@ const MaterialTableManager = ({
                         </Select>
                       </div>
                       <div>
+                        <Label>Catégorie</Label>
+                        <Select value={newMaterial.categorie} onValueChange={(value) => setNewMaterial(prev => ({ ...prev, categorie: value }))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choisir une catégorie" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Véhicules particuliers">Véhicules particuliers</SelectItem>
+                            <SelectItem value="Véhicules utilitaires">Véhicules utilitaires</SelectItem>
+                            <SelectItem value="Matériels industriels">Matériels industriels</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
                         <Label>Référence</Label>
                         <Input
-                          placeholder="Choisir une référence"
+                          placeholder="Référence automatique"
                           value={newMaterial.reference}
                           onChange={(e) => setNewMaterial(prev => ({ ...prev, reference: e.target.value }))}
                         />
@@ -190,43 +248,10 @@ const MaterialTableManager = ({
                     <div>
                       <Label>Désignation</Label>
                       <Input
-                        placeholder="Désignation automatique selon référence"
+                        placeholder="Désignation du matériel"
                         value={newMaterial.designation}
                         onChange={(e) => setNewMaterial(prev => ({ ...prev, designation: e.target.value }))}
                       />
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <Label>Catégorie</Label>
-                        <Select value={newMaterial.categorie} onValueChange={(value) => setNewMaterial(prev => ({ ...prev, categorie: value }))}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Catégorie" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Véhicules particuliers">Véhicules particuliers</SelectItem>
-                            <SelectItem value="Véhicules utilitaires">Véhicules utilitaires</SelectItem>
-                            <SelectItem value="Matériels industriels">Matériels industriels</SelectItem>
-                            <SelectItem value="Équipements bureautique">Équipements bureautique</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Montant HT (FCFA)</Label>
-                        <Input
-                          type="number"
-                          value={newMaterial.montantHT}
-                          onChange={(e) => setNewMaterial(prev => ({ ...prev, montantHT: parseInt(e.target.value) || 0 }))}
-                        />
-                      </div>
-                      <div>
-                        <Label>TVA (%)</Label>
-                        <Input
-                          type="number"
-                          value={newMaterial.tva}
-                          onChange={(e) => setNewMaterial(prev => ({ ...prev, tva: parseInt(e.target.value) || 18 }))}
-                        />
-                      </div>
                     </div>
                     
                     <div className="flex gap-2">
@@ -237,82 +262,142 @@ const MaterialTableManager = ({
                         Annuler
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               )}
 
-              {/* Tableau des matériels */}
-              <div className="border rounded-lg">
+              {/* Tableau principal des matériels */}
+              <div className="border rounded-none">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-purple-50">
-                      <TableHead className="w-12">Actions</TableHead>
-                      <TableHead>Matériel</TableHead>
-                      <TableHead>Poids %</TableHead>
-                      <TableHead>Score par Défaut</TableHead>
-                      <TableHead>Statut</TableHead>
-                      <TableHead>Date de création</TableHead>
-                      <TableHead>Dernière mise à jour</TableHead>
+                    <TableRow className="bg-purple-50 border-b-2">
+                      <TableHead className="w-16">Actions</TableHead>
+                      <TableHead className="font-semibold">Matériel</TableHead>
+                      <TableHead className="font-semibold">Fournisseur</TableHead>
+                      <TableHead className="font-semibold">Catégorie</TableHead>
+                      <TableHead className="font-semibold">Valeur HT</TableHead>
+                      <TableHead className="font-semibold">Statut</TableHead>
+                      <TableHead className="font-semibold">Date de création</TableHead>
+                      <TableHead className="font-semibold">Dernière mise à jour</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredMaterials.map((material) => (
                       <>
+                        {/* Ligne principale du matériel */}
                         <TableRow key={material.id} className="hover:bg-gray-50">
-                          <TableCell className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleMaterialExpansion(material.id)}
-                            >
-                              {expandedMaterials.includes(material.id) ? 
-                                <ChevronDown className="h-4 w-4" /> : 
-                                <ChevronRight className="h-4 w-4" />
-                              }
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <ToggleLeft className="h-4 w-4" />
-                            </Button>
+                          <TableCell className="p-2">
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleMaterialExpansion(material.id)}
+                                className="p-1"
+                              >
+                                {expandedMaterials.includes(material.id) ? 
+                                  <ChevronDown className="h-4 w-4" /> : 
+                                  <ChevronRight className="h-4 w-4" />
+                                }
+                              </Button>
+                              <Button variant="ghost" size="sm" className="p-1">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="p-1">
+                                <ToggleLeft className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div>
                               <div className="font-medium">{material.designation}</div>
-                              <div className="text-sm text-gray-500">{material.fournisseur} - {material.referenceMateriel}</div>
+                              <div className="text-sm text-gray-500">{material.referenceMateriel}</div>
                             </div>
                           </TableCell>
-                          <TableCell>1</TableCell>
-                          <TableCell>1</TableCell>
+                          <TableCell>{material.fournisseur}</TableCell>
+                          <TableCell>{material.famille}</TableCell>
+                          <TableCell>{material.valeurInitialeHT?.toLocaleString()} FCFA</TableCell>
                           <TableCell>
-                            <Badge variant="destructive">
+                            <Badge variant="destructive" className="bg-red-100 text-red-800">
                               INACTIVE
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-sm">{new Date().toLocaleDateString('fr-FR')}</TableCell>
+                          <TableCell className="text-sm">{new Date(material.dateAcquisition).toLocaleDateString('fr-FR')}</TableCell>
                           <TableCell className="text-sm">{new Date().toLocaleDateString('fr-FR')}</TableCell>
                         </TableRow>
                         
+                        {/* Section des composants (sous-tableau) */}
                         {expandedMaterials.includes(material.id) && (
                           <TableRow>
-                            <TableCell colSpan={7} className="bg-orange-50 border-l-4 border-orange-500">
-                              <div className="p-4">
-                                <div className="flex items-center justify-between mb-4">
-                                  <h4 className="font-medium text-orange-800">Sous-Matériels (Composants)</h4>
-                                  <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white">
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Add New SubMaterial
-                                  </Button>
+                            <TableCell colSpan={8} className="p-0">
+                              <div className="border-l-4 border-orange-500 bg-orange-50">
+                                {/* En-tête des composants */}
+                                <div className="bg-orange-600 text-white p-3">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="font-semibold flex items-center gap-2">
+                                      <Package className="h-4 w-4" />
+                                      Composants
+                                    </h4>
+                                    <div className="flex items-center gap-2">
+                                      <Button 
+                                        size="sm" 
+                                        className="bg-orange-700 hover:bg-orange-800 text-white"
+                                        onClick={() => setShowComponentForm(material.id)}
+                                      >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add New Composant
+                                      </Button>
+                                    </div>
+                                  </div>
                                 </div>
+
+                                {/* Formulaire d'ajout composant */}
+                                {showComponentForm === material.id && (
+                                  <div className="bg-white border-b p-4">
+                                    <div className="space-y-4">
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                          <Label>Désignation</Label>
+                                          <Input
+                                            placeholder="Désignation du composant"
+                                            value={newComponent.designation}
+                                            onChange={(e) => setNewComponent(prev => ({ ...prev, designation: e.target.value }))}
+                                          />
+                                        </div>
+                                        <div>
+                                          <Label>Famille Composant</Label>
+                                          <Select value={newComponent.familleComposant} onValueChange={(value) => setNewComponent(prev => ({ ...prev, familleComposant: value }))}>
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Choisir une famille" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="Moteur">Moteur</SelectItem>
+                                              <SelectItem value="Transmission">Transmission</SelectItem>
+                                              <SelectItem value="Électronique">Électronique</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <Button onClick={() => handleAddComponent(material.id)} className="bg-orange-600 hover:bg-orange-700">
+                                          Ajouter le composant
+                                        </Button>
+                                        <Button variant="outline" onClick={() => setShowComponentForm(null)}>
+                                          Annuler
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                                 
+                                {/* Tableau des composants */}
                                 <Table>
                                   <TableHeader>
                                     <TableRow className="bg-orange-100">
-                                      <TableHead>Actions</TableHead>
+                                      <TableHead className="w-16">Actions</TableHead>
                                       <TableHead>Composant</TableHead>
-                                      <TableHead>Poids %</TableHead>
-                                      <TableHead>Score par Défaut</TableHead>
+                                      <TableHead>Famille</TableHead>
+                                      <TableHead>Marque</TableHead>
+                                      <TableHead>Valeur HT</TableHead>
                                       <TableHead>Statut</TableHead>
                                       <TableHead>Date de création</TableHead>
                                       <TableHead>Dernière mise à jour</TableHead>
@@ -321,14 +406,16 @@ const MaterialTableManager = ({
                                   <TableBody>
                                     {material.composants && material.composants.length > 0 ? (
                                       material.composants.map((component) => (
-                                        <TableRow key={component.id}>
-                                          <TableCell className="flex items-center gap-2">
-                                            <Button variant="ghost" size="sm">
-                                              <Eye className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="sm">
-                                              <ToggleLeft className="h-4 w-4" />
-                                            </Button>
+                                        <TableRow key={component.id} className="bg-white hover:bg-orange-25">
+                                          <TableCell className="p-2">
+                                            <div className="flex items-center gap-1">
+                                              <Button variant="ghost" size="sm" className="p-1">
+                                                <Eye className="h-4 w-4" />
+                                              </Button>
+                                              <Button variant="ghost" size="sm" className="p-1">
+                                                <ToggleLeft className="h-4 w-4" />
+                                              </Button>
+                                            </div>
                                           </TableCell>
                                           <TableCell>
                                             <div>
@@ -336,20 +423,21 @@ const MaterialTableManager = ({
                                               <div className="text-sm text-gray-500">{component.numeroComposant}</div>
                                             </div>
                                           </TableCell>
-                                          <TableCell>1</TableCell>
-                                          <TableCell>1</TableCell>
+                                          <TableCell>{component.familleComposant}</TableCell>
+                                          <TableCell>{component.marque}</TableCell>
+                                          <TableCell>{component.valeurInitialeHT?.toLocaleString()} FCFA</TableCell>
                                           <TableCell>
-                                            <Badge variant="destructive">
+                                            <Badge variant="destructive" className="bg-red-100 text-red-800">
                                               INACTIVE
                                             </Badge>
                                           </TableCell>
-                                          <TableCell className="text-sm">{new Date().toLocaleDateString('fr-FR')}</TableCell>
+                                          <TableCell className="text-sm">{new Date(component.dateAcquisition).toLocaleDateString('fr-FR')}</TableCell>
                                           <TableCell className="text-sm">{new Date().toLocaleDateString('fr-FR')}</TableCell>
                                         </TableRow>
                                       ))
                                     ) : (
                                       <TableRow>
-                                        <TableCell colSpan={7} className="text-center text-gray-500 py-4">
+                                        <TableCell colSpan={8} className="text-center text-gray-500 py-4 bg-white">
                                           Aucun composant ajouté
                                         </TableCell>
                                       </TableRow>
@@ -371,50 +459,17 @@ const MaterialTableManager = ({
                   </div>
                 )}
               </div>
-
-              {/* Section des matériels ajoutés */}
-              {materials.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Matériels et composants ajoutés</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {materials.map((material) => (
-                        <div key={material.id} className="flex items-center justify-between p-4 border rounded-lg bg-blue-50">
-                          <div className="flex items-center gap-4">
-                            <Badge className="bg-blue-800">Matériel</Badge>
-                            <div>
-                              <div className="font-medium">{material.designation}</div>
-                              <div className="text-sm text-gray-600">{material.fournisseur} - {material.referenceMateriel}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <div className="font-bold">{material.valeurInitialeHT.toLocaleString()} FCFA</div>
-                              <Button variant="link" className="text-blue-600 p-0 h-auto">
-                                + Ajouter composant
-                              </Button>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveMaterial(material.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </TabsContent>
             
             <TabsContent value="active">
               <div className="text-center py-8 text-gray-500">
                 Filtres pour matériels actifs - à implémenter
+              </div>
+            </TabsContent>
+
+            <TabsContent value="inactive">
+              <div className="text-center py-8 text-gray-500">
+                Filtres pour matériels inactifs - à implémenter
               </div>
             </TabsContent>
           </Tabs>
