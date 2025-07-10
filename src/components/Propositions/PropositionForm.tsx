@@ -8,7 +8,7 @@ import LeasingTypeSelectorEnhanced from "./LeasingTypeSelectorEnhanced";
 import ConventionSelector from "./ConventionSelector";
 import CampagneSelector from "./CampagneSelector";
 import LeasingTypeSection from "./LeasingTypeSection";
-import MaterialSelector from "./MaterialSelector";
+import MaterialManager from "./MaterialManager";
 import PrestationsManager from "./PrestationsManager";
 import AmortizationTable from "./AmortizationTable";
 import ClientInfoSection from "./ClientInfoSection";
@@ -113,6 +113,9 @@ const BAREMES_DEMO: BaremeComplet[] = [
   }
 ];
 
+// Fournisseurs disponibles pour le MaterialManager
+const AVAILABLE_FOURNISSEURS = ["babacar-fils", "senegal-auto", "sonacos"];
+
 const defaultClientInfo: ClientInfo = {
   type: "prospect",
   nom: "",
@@ -149,8 +152,8 @@ const PropositionForm = () => {
   const [clientInfo, setClientInfo] = useState<ClientInfo>(defaultClientInfo);
   
   const [leasingTypeData, setLeasingTypeData] = useState<LeasingTypeData>(defaultLeasingTypeData);
-  const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
-  const [materialsData, setMaterialsData] = useState<MaterialData[]>([]);
+  const [selectedMaterials, setSelectedMaterials] = useState<MaterialData[]>([]);
+  const [selectedFournisseurs, setSelectedFournisseurs] = useState<string[]>([]);
   const [prestations, setPrestations] = useState<PrestationsData>(defaultPrestationsData);
   const [calculationInfo, setCalculationInfo] = useState<CalculationInfo>({
     duree: 36,
@@ -310,10 +313,15 @@ const PropositionForm = () => {
               </TabsContent>
               
               <TabsContent value="materials">
-                <MaterialSelector
-                  selectedMaterials={selectedMaterials}
+                <MaterialManager
+                  materials={selectedMaterials}
                   onMaterialsChange={setSelectedMaterials}
-                  onMaterialsDataChange={setMaterialsData}
+                  selectedFournisseurs={selectedFournisseurs}
+                  onFournisseursChange={setSelectedFournisseurs}
+                  availableFournisseurs={AVAILABLE_FOURNISSEURS}
+                  typeProposition={typeProposition}
+                  selectedConvention={selectedConvention}
+                  selectedCampagne={selectedCampagne}
                 />
               </TabsContent>
               
@@ -395,7 +403,7 @@ const PropositionForm = () => {
               <TabsContent value="amortissement">
                 {showAmortization ? (
                   <AmortizationTable 
-                    montant={materialsData.reduce((sum, m) => sum + (m.valeurInitialeHT || 0), 0)}
+                    montant={selectedMaterials.reduce((sum, m) => sum + (m.valeurInitialeHT || 0), 0)}
                     duree={calculationInfo.duree}
                     taux={7.5}
                     onSaveDraft={() => console.log("Sauvegarder en brouillon")}
