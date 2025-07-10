@@ -134,34 +134,36 @@ const MaterialManager = ({
     const categorieData = fournisseurData?.[selectedCategorie];
     
     if (categorieData && Array.isArray(categorieData)) {
-      const newMaterials = selectedMaterials.map(ref => {
-        const materielData = categorieData.find(m => m.ref === ref);
-        if (materielData) {
-          return {
-            id: Date.now().toString() + Math.random(),
-            referenceMateriel: materielData.ref,
-            designation: materielData.designation,
-            famille: selectedCategorie,
-            marque: "Non spécifié",
-            modele: "Non spécifié",
-            numeroSerieChassis: "",
-            anneeFabrication: new Date().getFullYear(),
-            dateMiseEnService: new Date().toISOString().split('T')[0],
-            dureeUtilisationEstimee: "",
-            origineMateriel: "Importé" as const,
-            statut: "En stock" as const,
-            etatMateriel: "Neuf" as const,
-            usage: "Professionnel" as const,
-            dateAcquisition: new Date().toISOString().split('T')[0],
-            valeurInitialeHT: materielData.prix,
-            valeurInitialeTTC: materielData.prix * 1.18,
-            valeurMarche: materielData.prix,
-            fournisseur: selectedFournisseur,
-            composants: []
-          };
-        }
-        return null;
-      }).filter((material): material is MaterialData => material !== null);
+      const newMaterials: MaterialData[] = selectedMaterials
+        .map(ref => {
+          const materielData = categorieData.find(m => m.ref === ref);
+          if (materielData) {
+            return {
+              id: Date.now().toString() + Math.random(),
+              referenceMateriel: materielData.ref,
+              designation: materielData.designation,
+              famille: selectedCategorie,
+              marque: "Non spécifié",
+              modele: "Non spécifié",
+              numeroSerieChassis: "",
+              anneeFabrication: new Date().getFullYear(),
+              dateMiseEnService: new Date().toISOString().split('T')[0],
+              dureeUtilisationEstimee: "",
+              origineMateriel: "Importé" as const,
+              statut: "En stock" as const,
+              etatMateriel: "Neuf" as const,
+              usage: "Professionnel" as const,
+              dateAcquisition: new Date().toISOString().split('T')[0],
+              valeurInitialeHT: materielData.prix,
+              valeurInitialeTTC: materielData.prix * 1.18,
+              valeurMarche: materielData.prix,
+              fournisseur: selectedFournisseur,
+              composants: []
+            };
+          }
+          return null;
+        })
+        .filter((material): material is MaterialData => material !== null);
       
       onMaterialsChange([...materials, ...newMaterials]);
       setSelectedMaterials([]);
