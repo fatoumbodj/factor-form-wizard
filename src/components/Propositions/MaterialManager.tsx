@@ -1,29 +1,21 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Minus, Edit } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Trash2, Settings, Upload, FileText } from "lucide-react";
 import { TypeProposition, Convention, Campagne } from "@/types/leasing";
-
-interface MaterialItem {
-  id: string;
-  type: "materiel" | "composant";
-  fournisseur: string;
-  reference: string;
-  designation: string;
-  categorie: string;
-  montantHT: number;
-  taux: number;
-  qte: number;
-  parentMaterialId?: string; // Pour lier les composants à un matériel
-}
+import { MaterialData, ComponentData } from "@/types/material";
+import MaterialForm from "./MaterialForm";
+import ComponentForm from "./ComponentForm";
+import FileUploadSection from "./FileUploadSection";
 
 interface MaterialManagerProps {
-  materials: MaterialItem[];
-  onMaterialsChange: (materials: MaterialItem[]) => void;
+  materials: MaterialData[];
+  onMaterialsChange: (materials: MaterialData[]) => void;
   selectedFournisseurs: string[];
   onFournisseursChange: (fournisseurs: string[]) => void;
   availableFournisseurs: string[];
@@ -31,33 +23,6 @@ interface MaterialManagerProps {
   selectedConvention?: Convention | null;
   selectedCampagne?: Campagne | null;
 }
-
-const CATEGORIES_DEMO = [
-  "Véhicules",
-  "Matériels Industriels", 
-  "Équipements Bureautique",
-  "Équipements Médicaux"
-];
-
-// Demo data pour références et désignations
-const MATERIELS_DEMO = {
-  "Sonacos": [
-    { reference: "VH001", designation: "Véhicule utilitaire Peugeot" },
-    { reference: "VH002", designation: "Camionnette Renault" }
-  ],
-  "Senegal-Auto": [
-    { reference: "VP001", designation: "Voiture particulière Toyota" },
-    { reference: "VP002", designation: "SUV Honda" }
-  ],
-  "Babacar & Fils": [
-    { reference: "MI001", designation: "Machine industrielle" },
-    { reference: "MI002", designation: "Équipement de production" }
-  ],
-  "Afrique Matériel": [
-    { reference: "BUR001", designation: "Ordinateur portable" },
-    { reference: "BUR002", designation: "Imprimante multifonction" }
-  ]
-};
 
 const MaterialManager = ({ 
   materials, 
@@ -69,141 +34,61 @@ const MaterialManager = ({
   selectedConvention,
   selectedCampagne
 }: MaterialManagerProps) => {
-  const [newMaterial, setNewMaterial] = useState<Partial<MaterialItem>>({
-    type: "materiel",
-    fournisseur: "",
-    reference: "",
-    designation: "",
-    categorie: "",
-    montantHT: 0,
-    taux: 18,
-    qte: 1
-  });
-
-  const [showCustomReference, setShowCustomReference] = useState(false);
-  const [selectedMaterialForComponent, setSelectedMaterialForComponent] = useState<string | null>(null);
-  const [addingNewMaterial, setAddingNewMaterial] = useState(false);
+  const [showMaterialForm, setShowMaterialForm] = useState(false);
+  const [showComponentForm, setShowComponentForm] = useState(false);
+  const [selectedMaterialForComponent, setSelectedMaterialForComponent] = useState<MaterialData | null>(null);
 
   const handleFournisseurSelect = (fournisseur: string) => {
     if (!selectedFournisseurs.includes(fournisseur)) {
       onFournisseursChange([...selectedFournisseurs, fournisseur]);
-      if (!newMaterial.fournisseur) {
-        setNewMaterial(prev => ({ ...prev, fournisseur }));
-      }
     }
   };
 
   const handleRemoveFournisseur = (fournisseur: string) => {
     onFournisseursChange(selectedFournisseurs.filter(f => f !== fournisseur));
-    if (newMaterial.fournisseur === fournisseur) {
-      setNewMaterial(prev => ({ ...prev, fournisseur: "", reference: "", designation: "" }));
-    }
   };
 
-  const handleFournisseurChange = (fournisseur: string) => {
-    setNewMaterial(prev => ({ 
-      ...prev, 
-      fournisseur,
-      reference: "",
-      designation: ""
-    }));
-    setShowCustomReference(false);
+  const handleAddMaterial = (material: MaterialData) => {
+    onMaterialsChange([...materials, material]);
+    setShowMaterialForm(false);
   };
 
-  const handleReferenceChange = (reference: string) => {
-    if (reference === "custom") {
-      setShowCustomReference(true);
-      setNewMaterial(prev => ({ 
-        ...prev, 
-        reference: "",
-        designation: ""
-      }));
-      return;
-    }
-
-    const materielData = MATERIELS_DEMO[newMaterial.fournisseur as keyof typeof MATERIELS_DEMO]?.find(
-      m => m.reference === reference
-    );
-    
-    setNewMaterial(prev => ({ 
-      ...prev, 
-      reference,
-      designation: materielData?.designation || ""
-    }));
-    setShowCustomReference(false);
-  };
-
-  const getAvailableReferences = () => {
-    if (!newMaterial.fournisseur) return [];
-    return MATERIELS_DEMO[newMaterial.fournisseur as keyof typeof MATERIELS_DEMO] || [];
-  };
-
-  const handleAddMaterial = () => {
-    if (newMaterial.designation && newMaterial.fournisseur && newMaterial.reference) {
-      const material: MaterialItem = {
-        id: Date.now().toString(),
-        type: "materiel",
-        fournisseur: newMaterial.fournisseur,
-        reference: newMaterial.reference,
-        designation: newMaterial.designation,
-        categorie: newMaterial.categorie || "",
-        montantHT: newMaterial.montantHT || 0,
-        taux: newMaterial.taux || 18,
-        qte: newMaterial.qte || 1
-      };
-      onMaterialsChange([...materials, material]);
-      resetNewMaterialForm();
-      setAddingNewMaterial(false);
-    }
-  };
-
-  const handleAddComponent = (parentMaterialId?: string) => {
-    if (newMaterial.designation && newMaterial.fournisseur && newMaterial.reference) {
-      const component: MaterialItem = {
-        id: Date.now().toString(),
-        type: "composant",
-        fournisseur: newMaterial.fournisseur,
-        reference: newMaterial.reference,
-        designation: newMaterial.designation,
-        categorie: newMaterial.categorie || "",
-        montantHT: newMaterial.montantHT || 0,
-        taux: newMaterial.taux || 18,
-        qte: newMaterial.qte || 1,
-        parentMaterialId
-      };
-      onMaterialsChange([...materials, component]);
-      resetNewMaterialForm();
-      setSelectedMaterialForComponent(null);
-    }
-  };
-
-  const resetNewMaterialForm = () => {
-    setNewMaterial({
-      type: "materiel",
-      fournisseur: selectedFournisseurs[0] || "",
-      reference: "",
-      designation: "",
-      categorie: "",
-      montantHT: 0,
-      taux: 18,
-      qte: 1
+  const handleAddComponent = (component: ComponentData) => {
+    const updatedMaterials = materials.map(material => {
+      if (material.id === component.materielParentId) {
+        return {
+          ...material,
+          composants: [...(material.composants || []), component]
+        };
+      }
+      return material;
     });
-    setShowCustomReference(false);
+    onMaterialsChange(updatedMaterials);
+    setShowComponentForm(false);
+    setSelectedMaterialForComponent(null);
   };
 
-  const handleRemoveMaterial = (id: string) => {
-    // Supprimer le matériel et tous ses composants
-    onMaterialsChange(materials.filter(m => m.id !== id && m.parentMaterialId !== id));
+  const handleRemoveMaterial = (materialId: string) => {
+    onMaterialsChange(materials.filter(m => m.id !== materialId));
   };
 
-  const handleRemoveComponent = (id: string) => {
-    onMaterialsChange(materials.filter(m => m.id !== id));
+  const handleRemoveComponent = (materialId: string, componentId: string) => {
+    const updatedMaterials = materials.map(material => {
+      if (material.id === materialId) {
+        return {
+          ...material,
+          composants: material.composants?.filter(c => c.id !== componentId) || []
+        };
+      }
+      return material;
+    });
+    onMaterialsChange(updatedMaterials);
   };
 
-  const handleUpdateQuantity = (id: string, delta: number) => {
-    onMaterialsChange(materials.map(m => 
-      m.id === id ? { ...m, qte: Math.max(1, m.qte + delta) } : m
-    ));
+  const handleFileUpload = (file: File, type: "materials" | "components") => {
+    console.log(`Uploading ${type} file:`, file.name);
+    // Ici vous pouvez implémenter la logique de traitement du fichier
+    // Par exemple, parser un CSV/Excel et créer des matériels/composants
   };
 
   const getTypeLabel = () => {
@@ -213,193 +98,26 @@ const MaterialManager = ({
     return "";
   };
 
-  // Grouper les matériels et leurs composants
-  const groupedMaterials = () => {
-    const materiels = materials.filter(m => m.type === "materiel");
-    const composants = materials.filter(m => m.type === "composant");
-    
-    return materiels.map(materiel => ({
-      materiel,
-      composants: composants.filter(c => c.parentMaterialId === materiel.id)
-    }));
+  const calculateTotalValue = () => {
+    return materials.reduce((total, material) => {
+      const materialValue = material.valeurInitialeHT;
+      const componentsValue = (material.composants || []).reduce((sum, comp) => sum + comp.valeurInitialeHT, 0);
+      return total + materialValue + componentsValue;
+    }, 0);
   };
-
-  const renderMaterialForm = (isForComponent = false, parentMaterialId?: string) => (
-    <div className="p-4 bg-gray-50 rounded space-y-4">
-      <h4 className="font-medium">
-        {isForComponent ? 
-          `Ajouter un composant au matériel ${materials.find(m => m.id === parentMaterialId)?.designation}` : 
-          "Ajouter un nouveau matériel"
-        }
-      </h4>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label>Fournisseur</Label>
-          <Select value={newMaterial.fournisseur} onValueChange={handleFournisseurChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choisir un fournisseur" />
-            </SelectTrigger>
-            <SelectContent>
-              {selectedFournisseurs.map(fournisseur => (
-                <SelectItem key={fournisseur} value={fournisseur}>
-                  {fournisseur}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div>
-          <Label>Référence</Label>
-          <Select value={newMaterial.reference} onValueChange={handleReferenceChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choisir une référence" />
-            </SelectTrigger>
-            <SelectContent>
-              {getAvailableReferences().map(ref => (
-                <SelectItem key={ref.reference} value={ref.reference}>
-                  {ref.reference}
-                </SelectItem>
-              ))}
-              <SelectItem value="custom">
-                <div className="flex items-center">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Nouvelle référence
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Saisie manuelle de référence */}
-      {showCustomReference && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label>Nouvelle référence *</Label>
-            <Input
-              value={newMaterial.reference}
-              onChange={(e) => setNewMaterial(prev => ({ ...prev, reference: e.target.value }))}
-              placeholder="Saisir la référence"
-            />
-          </div>
-          <div>
-            <Label>Désignation *</Label>
-            <Input
-              value={newMaterial.designation}
-              onChange={(e) => setNewMaterial(prev => ({ ...prev, designation: e.target.value }))}
-              placeholder="Saisir la désignation"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Désignation automatique ou manuelle */}
-      {!showCustomReference && (
-        <div>
-          <Label>Désignation</Label>
-          <Input
-            value={newMaterial.designation}
-            onChange={(e) => setNewMaterial(prev => ({ ...prev, designation: e.target.value }))}
-            placeholder="Désignation automatique selon référence"
-            readOnly={!showCustomReference}
-            className={!showCustomReference ? "bg-white" : ""}
-          />
-        </div>
-      )}
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <Label>Catégorie</Label>
-          <Select value={newMaterial.categorie} onValueChange={(value) => setNewMaterial(prev => ({ ...prev, categorie: value }))}>
-            <SelectTrigger>
-              <SelectValue placeholder="Catégorie" />
-            </SelectTrigger>
-            <SelectContent>
-              {CATEGORIES_DEMO.map(cat => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Montant HT (FCFA)</Label>
-          <Input
-            type="number"
-            value={newMaterial.montantHT}
-            onChange={(e) => setNewMaterial(prev => ({ ...prev, montantHT: parseFloat(e.target.value) || 0 }))}
-          />
-        </div>
-        <div>
-          <Label>TVA (%)</Label>
-          <Input
-            type="number"
-            value={newMaterial.taux}
-            onChange={(e) => setNewMaterial(prev => ({ ...prev, taux: parseFloat(e.target.value) || 0 }))}
-          />
-        </div>
-      </div>
-
-      {/* Boutons d'ajout */}
-      <div className="flex gap-2">
-        {isForComponent ? (
-          <>
-            <Button 
-              onClick={() => handleAddComponent(parentMaterialId)} 
-              className="bg-green-600"
-              disabled={!newMaterial.designation || !newMaterial.fournisseur || !newMaterial.reference}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter le composant
-            </Button>
-            <Button 
-              onClick={() => {
-                setSelectedMaterialForComponent(null);
-                resetNewMaterialForm();
-              }} 
-              variant="outline"
-            >
-              Annuler
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button 
-              onClick={handleAddMaterial} 
-              className="bg-blue-600"
-              disabled={!newMaterial.designation || !newMaterial.fournisseur || !newMaterial.reference}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter le matériel
-            </Button>
-            <Button 
-              onClick={() => {
-                setAddingNewMaterial(false);
-                resetNewMaterialForm();
-              }} 
-              variant="outline"
-            >
-              Annuler
-            </Button>
-          </>
-        )}
-      </div>
-    </div>
-  );
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Matériel et Composants à financer</CardTitle>
+        <CardTitle>Matériels et Composants à financer</CardTitle>
         {typeProposition && (
           <div className="text-sm text-muted-foreground">
             Type: {getTypeLabel()}
           </div>
         )}
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Sélection fournisseur */}
+      <CardContent className="space-y-6">
+        {/* Sélection des fournisseurs */}
         <div>
           <Label htmlFor="fournisseur">Fournisseur(s) agréé(s) *</Label>
           <Select onValueChange={handleFournisseurSelect}>
@@ -415,7 +133,6 @@ const MaterialManager = ({
             </SelectContent>
           </Select>
           
-          {/* Fournisseurs sélectionnés */}
           {selectedFournisseurs.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
               {selectedFournisseurs.map(fournisseur => (
@@ -430,118 +147,215 @@ const MaterialManager = ({
           )}
         </div>
 
-        {/* Bouton pour ajouter un nouveau matériel */}
-        {!addingNewMaterial && !selectedMaterialForComponent && (
-          <div className="flex justify-center">
-            <Button 
-              onClick={() => setAddingNewMaterial(true)}
-              className="bg-blue-600"
-              disabled={selectedFournisseurs.length === 0}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter un nouveau matériel
-            </Button>
+        {/* Sélection de fournisseurs supplémentaires */}
+        {selectedFournisseurs.length > 0 && (
+          <div>
+            <Label htmlFor="fournisseur-supplementaire">Ajouter d'autres fournisseurs</Label>
+            <Select onValueChange={handleFournisseurSelect}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir un fournisseur supplémentaire" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableFournisseurs
+                  .filter(f => !selectedFournisseurs.includes(f))
+                  .map(fournisseur => (
+                    <SelectItem key={fournisseur} value={fournisseur}>
+                      {fournisseur}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
 
-        {/* Formulaire d'ajout de matériel */}
-        {addingNewMaterial && renderMaterialForm(false)}
-
-        {/* Formulaire d'ajout de composant */}
-        {selectedMaterialForComponent && renderMaterialForm(true, selectedMaterialForComponent)}
-
-        {/* Liste des matériels groupés */}
-        {groupedMaterials().length > 0 && (
-          <div className="space-y-6">
-            <h4 className="font-medium">Matériels et composants ajoutés</h4>
+        {/* Onglets pour matériels et composants */}
+        {selectedFournisseurs.length > 0 && (
+          <Tabs defaultValue="materials" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="materials">
+                <Settings className="h-4 w-4 mr-2" />
+                Matériels
+              </TabsTrigger>
+              <TabsTrigger value="components">
+                <Plus className="h-4 w-4 mr-2" />
+                Composants
+              </TabsTrigger>
+            </TabsList>
             
-            {groupedMaterials().map(({ materiel, composants }) => (
-              <div key={materiel.id} className="border rounded-lg p-4 space-y-3">
-                {/* En-tête du matériel */}
-                <div className="flex items-center justify-between bg-blue-50 p-3 rounded">
-                  <div className="flex items-center gap-4">
-                    <Badge variant="default">Matériel</Badge>
-                    <div>
-                      <div className="font-medium">{materiel.designation}</div>
-                      <div className="text-sm text-gray-600">
-                        {materiel.fournisseur} - {materiel.reference}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{materiel.montantHT.toLocaleString()} FCFA</span>
+            <TabsContent value="materials" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Upload de fichier matériels */}
+                <FileUploadSection
+                  title="Importer des matériels"
+                  onFileUpload={(file) => handleFileUpload(file, "materials")}
+                  acceptedFormats="csv, xlsx, xls"
+                  maxSize={5}
+                />
+                
+                {/* Saisie manuelle matériel */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Saisie manuelle</CardTitle>
+                  </CardHeader>
+                  <CardContent>
                     <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedMaterialForComponent(materiel.id);
-                        setAddingNewMaterial(false);
-                      }}
-                      disabled={selectedMaterialForComponent === materiel.id || addingNewMaterial}
+                      onClick={() => setShowMaterialForm(true)}
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      disabled={showMaterialForm || showComponentForm}
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Ajouter composant
+                      Ajouter un matériel
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleRemoveMaterial(materiel.id)}>
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Composants du matériel */}
-                {composants.length > 0 && (
-                  <div className="ml-4 space-y-2">
-                    <div className="text-sm font-medium text-gray-700">Composants :</div>
-                    {composants.map(composant => (
-                      <div key={composant.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                        <div className="flex items-center gap-4">
-                          <Badge variant="secondary" className="text-xs">Composant</Badge>
-                          <div>
-                            <div className="text-sm font-medium">{composant.designation}</div>
-                            <div className="text-xs text-gray-600">
-                              {composant.fournisseur} - {composant.reference}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1">
-                            <Button size="sm" variant="outline" onClick={() => handleUpdateQuantity(composant.id, -1)}>
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="w-8 text-center text-sm">{composant.qte}</span>
-                            <Button size="sm" variant="outline" onClick={() => handleUpdateQuantity(composant.id, 1)}>
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <span className="text-sm font-medium">{composant.montantHT.toLocaleString()} FCFA</span>
-                          <Button size="sm" variant="outline" onClick={() => handleRemoveComponent(composant.id)}>
-                            <Trash2 className="h-3 w-3 text-red-600" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Total du matériel + composants */}
-                <div className="bg-blue-100 p-2 rounded text-right">
-                  <span className="text-sm font-medium text-blue-800">
-                    Total matériel : {(materiel.montantHT * materiel.qte + 
-                      composants.reduce((sum, c) => sum + (c.montantHT * c.qte), 0)).toLocaleString()} FCFA
-                  </span>
-                </div>
+                  </CardContent>
+                </Card>
               </div>
+
+              {/* Formulaire d'ajout de matériel */}
+              {showMaterialForm && (
+                <MaterialForm
+                  onAddMaterial={handleAddMaterial}
+                  onCancel={() => setShowMaterialForm(false)}
+                  selectedFournisseur={selectedFournisseurs[0]}
+                />
+              )}
+            </TabsContent>
+            
+            <TabsContent value="components" className="space-y-4">
+              {materials.length === 0 ? (
+                <div className="text-center p-8 text-muted-foreground">
+                  Ajoutez d'abord des matériels avant de pouvoir ajouter des composants.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Upload de fichier composants */}
+                  <FileUploadSection
+                    title="Importer des composants"
+                    onFileUpload={(file) => handleFileUpload(file, "components")}
+                    acceptedFormats="csv, xlsx, xls"
+                    maxSize={5}
+                  />
+                  
+                  {/* Saisie manuelle composant */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Saisie manuelle</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <Label>Choisir le matériel parent</Label>
+                        <Select 
+                          onValueChange={(materialId) => {
+                            const material = materials.find(m => m.id === materialId);
+                            if (material) {
+                              setSelectedMaterialForComponent(material);
+                              setShowComponentForm(true);
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un matériel" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {materials.map(material => (
+                              <SelectItem key={material.id} value={material.id}>
+                                {material.referenceMateriel} - {material.designation}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Formulaire d'ajout de composant */}
+              {showComponentForm && selectedMaterialForComponent && (
+                <ComponentForm
+                  onAddComponent={handleAddComponent}
+                  onCancel={() => {
+                    setShowComponentForm(false);
+                    setSelectedMaterialForComponent(null);
+                  }}
+                  materielParentId={selectedMaterialForComponent.id}
+                  materielParentRef={selectedMaterialForComponent.referenceMateriel}
+                  fournisseurs={selectedFournisseurs}
+                />
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
+
+        {/* Liste des matériels ajoutés */}
+        {materials.length > 0 && (
+          <div className="space-y-4">
+            <h4 className="font-medium text-lg">Matériels ajoutés</h4>
+            
+            {materials.map(material => (
+              <Card key={material.id} className="border-l-4 border-l-blue-500">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">{material.designation}</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {material.referenceMateriel} - {material.marque} {material.modele}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{material.famille}</Badge>
+                      <span className="font-medium">{material.valeurInitialeHT.toLocaleString()} FCFA HT</span>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleRemoveMaterial(material.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                
+                {material.composants && material.composants.length > 0 && (
+                  <CardContent className="pt-0">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Composants associés:</Label>
+                      {material.composants.map(component => (
+                        <div key={component.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                          <div>
+                            <span className="text-sm font-medium">{component.designation}</span>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              {component.numeroComposant}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">{component.valeurInitialeHT.toLocaleString()} FCFA</span>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleRemoveComponent(material.id, component.id)}
+                            >
+                              <Trash2 className="h-3 w-3 text-red-600" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
             ))}
             
             {/* Total général */}
-            <div className="bg-blue-50 p-3 rounded">
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-blue-800">Total général HT :</span>
-                <span className="font-bold text-blue-800">
-                  {materials.reduce((sum, m) => sum + (m.montantHT * m.qte), 0).toLocaleString()} FCFA
-                </span>
-              </div>
-            </div>
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="pt-6">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-blue-800">Total général HT :</span>
+                  <span className="font-bold text-blue-800 text-lg">
+                    {calculateTotalValue().toLocaleString()} FCFA
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
       </CardContent>

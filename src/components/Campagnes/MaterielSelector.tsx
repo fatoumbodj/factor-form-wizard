@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Package, Search, Tag } from "lucide-react";
+import { Package, Search, Tag, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -33,7 +33,6 @@ interface MaterielSelectorProps {
   onFournisseurChange?: (fournisseurs: string[]) => void;
 }
 
-// Données de démonstration étendues
 const MATERIELS_DISPONIBLES: Materiel[] = [
   {
     id: "mat-1",
@@ -119,6 +118,18 @@ const FOURNISSEURS_DISPONIBLES = [
   { id: "agri-senegal", nom: "Agri Senegal" }
 ];
 
+const CATEGORIES_MATERIELLES = [
+  "Véhicules légers",
+  "Véhicules utilitaires", 
+  "Équipements agricoles",
+  "Équipements BTP",
+  "Machines industrielles",
+  "Matériel informatique",
+  "Équipements médicaux",
+  "Matériel de transport",
+  "Pick-up"
+];
+
 const MaterielSelector = ({ 
   fournisseursSelectionnes, 
   materielsSelectionnes, 
@@ -129,6 +140,7 @@ const MaterielSelector = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [nouveauxArguments, setNouveauxArguments] = useState<{[key: string]: string}>({});
   const [selectedFournisseur, setSelectedFournisseur] = useState<string>("");
+  const [selectedCategorie, setSelectedCategorie] = useState<string>("");
 
   const handleFournisseurChange = (fournisseurId: string) => {
     setSelectedFournisseur(fournisseurId);
@@ -137,13 +149,18 @@ const MaterielSelector = ({
     }
   };
 
+  const handleCategorieChange = (categorie: string) => {
+    setSelectedCategorie(categorie);
+  };
+
   const materielsFiltres = MATERIELS_DISPONIBLES.filter(materiel => {
     const fournisseurMatch = selectedFournisseur === "" || materiel.fournisseur === selectedFournisseur;
+    const categorieMatch = selectedCategorie === "" || materiel.categorie === selectedCategorie;
     const searchMatch = searchTerm === "" || 
       materiel.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
       materiel.categorie.toLowerCase().includes(searchTerm.toLowerCase());
     
-    return fournisseurMatch && searchMatch;
+    return fournisseurMatch && categorieMatch && searchMatch;
   });
 
   const formatCurrency = (amount: number) => {
@@ -191,6 +208,24 @@ const MaterielSelector = ({
                 {FOURNISSEURS_DISPONIBLES.map(fournisseur => (
                   <SelectItem key={fournisseur.id} value={fournisseur.id}>
                     {fournisseur.nom}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              Catégorie matérielle *
+            </label>
+            <Select value={selectedCategorie} onValueChange={handleCategorieChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner une catégorie" />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES_MATERIELLES.map(categorie => (
+                  <SelectItem key={categorie} value={categorie}>
+                    {categorie}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -275,17 +310,17 @@ const MaterielSelector = ({
           ))}
         </div>
 
-        {selectedFournisseur && materielsFiltres.length === 0 && (
+        {(selectedFournisseur || selectedCategorie) && materielsFiltres.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
             <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Aucun matériel disponible pour ce fournisseur</p>
+            <p>Aucun matériel disponible pour cette combinaison de filtres</p>
           </div>
         )}
 
-        {!selectedFournisseur && (
+        {!selectedFournisseur && !selectedCategorie && (
           <div className="text-center py-8 text-muted-foreground">
             <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Veuillez sélectionner un fournisseur pour voir les matériels disponibles</p>
+            <p>Veuillez sélectionner un fournisseur et une catégorie pour voir les matériels disponibles</p>
           </div>
         )}
       </CardContent>

@@ -2,12 +2,13 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TypeProposition, Convention, Campagne, BaremeComplet } from "@/types/leasing";
+import { MaterialData } from "@/types/material";
 import { Calculator, User, Package, FileText, Settings } from "lucide-react";
 import LeasingTypeSelectorEnhanced from "./LeasingTypeSelectorEnhanced";
 import ConventionSelector from "./ConventionSelector";
 import CampagneSelector from "./CampagneSelector";
 import LeasingTypeSection from "./LeasingTypeSection";
-import MaterialManager from "./MaterialManager";
+import MaterialSelector from "./MaterialSelector";
 import PrestationsManager from "./PrestationsManager";
 import AmortizationTable from "./AmortizationTable";
 import ClientInfoSection from "./ClientInfoSection";
@@ -22,7 +23,6 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 
 interface ClientInfo {
   type: "client" | "prospect";
@@ -44,18 +44,6 @@ interface LeasingTypeData {
   agence: string;
   dateDemande: string;
   dateMiseEnServiceProvisionnelle: string;
-}
-
-interface MaterialItem {
-  id: string;
-  type: "materiel" | "composant";
-  fournisseur: string;
-  reference: string;
-  designation: string;
-  categorie: string;
-  montantHT: number;
-  taux: number;
-  qte: number;
 }
 
 interface PrestationsData {
@@ -161,8 +149,8 @@ const PropositionForm = () => {
   const [clientInfo, setClientInfo] = useState<ClientInfo>(defaultClientInfo);
   
   const [leasingTypeData, setLeasingTypeData] = useState<LeasingTypeData>(defaultLeasingTypeData);
-  const [materials, setMaterials] = useState<MaterialItem[]>([]);
-  const [selectedFournisseurs, setSelectedFournisseurs] = useState<string[]>([]);
+  const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
+  const [materialsData, setMaterialsData] = useState<MaterialData[]>([]);
   const [prestations, setPrestations] = useState<PrestationsData>(defaultPrestationsData);
   const [calculationInfo, setCalculationInfo] = useState<CalculationInfo>({
     duree: 36,
@@ -178,7 +166,7 @@ const PropositionForm = () => {
     setSelectedCampagne(null);
     
     if (type === "classique") {
-      setCurrentStep(3); // Aller directement à la saisie
+      setCurrentStep(3);
     } else {
       setCurrentStep(2);
     }
@@ -196,12 +184,10 @@ const PropositionForm = () => {
 
   const getAvailableBaremes = () => {
     if (typeProposition === "classique") {
-      // Pour le type classique, d'abord les barèmes standard, puis dérogatoires si client a accès
       const standardBaremes = BAREMES_DEMO.filter(b => b.type === "standard");
       const derogatoireBaremes = BAREMES_DEMO.filter(b => b.type === "derogatoire");
       
-      // Logique pour déterminer si le client a accès aux barèmes dérogatoires
-      const clientHasDerogatory = clientInfo.categorieJuridique === "Entreprise"; // exemple
+      const clientHasDerogatory = clientInfo.categorieJuridique === "Entreprise";
       
       return clientHasDerogatory ? [...standardBaremes, ...derogatoireBaremes] : standardBaremes;
     } else if (typeProposition === "convention") {
@@ -220,21 +206,6 @@ const PropositionForm = () => {
       ] : [];
     }
     return BAREMES_DEMO;
-  };
-
-  const getAvailableFournisseurs = () => {
-    if (typeProposition === "convention" && selectedConvention) {
-      return selectedConvention.fournisseurs || [];
-    } else if (typeProposition === "campagne" && selectedCampagne) {
-      return selectedCampagne.fournisseurs || [];
-    }
-    // Pour type classique, tous les fournisseurs
-    return [
-      "Sonacos",
-      "Senegal-Auto", 
-      "Babacar & Fils",
-      "Afrique Matériel"
-    ];
   };
 
   const renderStepContent = () => {
@@ -339,15 +310,10 @@ const PropositionForm = () => {
               </TabsContent>
               
               <TabsContent value="materials">
-                <MaterialManager
-                  materials={materials}
-                  onMaterialsChange={setMaterials}
-                  selectedFournisseurs={selectedFournisseurs}
-                  onFournisseursChange={setSelectedFournisseurs}
-                  availableFournisseurs={getAvailableFournisseurs()}
-                  typeProposition={typeProposition}
-                  selectedConvention={selectedConvention}
-                  selectedCampagne={selectedCampagne}
+                <MaterialSelector
+                  selectedMaterials={selectedMaterials}
+                  onMaterialsChange={setSelectedMaterials}
+                  onMaterialsDataChange={setMaterialsData}
                 />
               </TabsContent>
               
@@ -429,7 +395,7 @@ const PropositionForm = () => {
               <TabsContent value="amortissement">
                 {showAmortization ? (
                   <AmortizationTable 
-                    montant={materials.reduce((sum, m) => sum + (m.montantHT * m.qte), 0)}
+                    montant={materialsData.reduce((sum, m) => sum + (m.valeurInitialeHT || 0), 0)}
                     duree={calculationInfo.duree}
                     taux={7.5}
                     onSaveDraft={() => console.log("Sauvegarder en brouillon")}

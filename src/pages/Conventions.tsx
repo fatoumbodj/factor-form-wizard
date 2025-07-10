@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import Header from "@/components/Layout/Header";
 import { AppSidebar } from "@/components/Layout/Sidebar";
@@ -48,6 +47,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Slider } from "@/components/ui/slider";
 
 // Données de démonstration étendues
 const CONVENTIONS_DEMO: Convention[] = [
@@ -145,11 +145,30 @@ const BAREMES_DISPONIBLES: BaremeComplet[] = [
   }
 ];
 
+const TYPES_CRITERES = [
+  { id: "segment", nom: "Segment client" },
+  { id: "secteur", nom: "Secteur d'activité" },
+  { id: "profession", nom: "Profession" },
+  { id: "groupe_client", nom: "Groupe client" }
+];
+
+const CRITERES_PAR_TYPE = {
+  segment: ["Particulier", "Professionnel", "Entreprise", "Grand compte"],
+  secteur: ["Agriculture", "Commerce", "Industrie", "Services", "BTP"],
+  profession: ["Médecin", "Avocat", "Commerçant", "Agriculteur", "Artisan"],
+  groupe_client: ["Groupe A", "Groupe B", "Groupe C", "VIP"]
+};
+
 const Conventions = () => {
   const [conventions, setConventions] = useState<Convention[]>(CONVENTIONS_DEMO);
   const [currentTab, setCurrentTab] = useState("actives");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingConvention, setEditingConvention] = useState<Convention | null>(null);
+  const [selectedTypeCritere, setSelectedTypeCritere] = useState<string>("");
+  const [selectedCriteres, setSelectedCriteres] = useState<string[]>([]);
+  const [tauxRange, setTauxRange] = useState<number[]>([6, 8]);
+  const [dureeRange, setDureeRange] = useState<number[]>([12, 60]);
+  const [activeBaremeTab, setActiveBaremeTab] = useState<"existing" | "new">("existing");
   const [formData, setFormData] = useState({
     nom: "",
     description: "",
@@ -171,7 +190,28 @@ const Conventions = () => {
     dateDebut: "",
     dateFin: "",
     reconductionTacite: false,
-    actif: true
+    actif: true,
+    selectedBareme: null as BaremeComplet | null,
+    newBareme: {
+      nom: "",
+      typeBareme: "convention",
+      typologie: "",
+      type: "",
+      taux: "",
+      duree: "",
+      periodicite: "",
+      typeEcheancier: "",
+      marge: "",
+      valeurResiduelle: "",
+      valeurReprise: "",
+      premierLoyerMajore: "",
+      premierLoyerType: "sup",
+      codeClient: "",
+      tauxMin: 6,
+      tauxMax: 8,
+      dureeMin: 12,
+      dureeMax: 60
+    }
   });
 
   const resetForm = () => {
@@ -196,9 +236,35 @@ const Conventions = () => {
       dateDebut: "",
       dateFin: "",
       reconductionTacite: false,
-      actif: true
+      actif: true,
+      selectedBareme: null,
+      newBareme: {
+        nom: "",
+        typeBareme: "convention",
+        typologie: "",
+        type: "",
+        taux: "",
+        duree: "",
+        periodicite: "",
+        typeEcheancier: "",
+        marge: "",
+        valeurResiduelle: "",
+        valeurReprise: "",
+        premierLoyerMajore: "",
+        premierLoyerType: "sup",
+        codeClient: "",
+        tauxMin: 6,
+        tauxMax: 8,
+        dureeMin: 12,
+        dureeMax: 60
+      }
     });
     setEditingConvention(null);
+    setSelectedTypeCritere("");
+    setSelectedCriteres([]);
+    setTauxRange([6, 8]);
+    setDureeRange([12, 60]);
+    setActiveBaremeTab("existing");
   };
 
   const handleEdit = (convention: Convention) => {
@@ -224,12 +290,39 @@ const Conventions = () => {
       dateDebut: convention.dateDebut.toISOString().split('T')[0],
       dateFin: convention.dateFin ? convention.dateFin.toISOString().split('T')[0] : "",
       reconductionTacite: convention.reconductionTacite,
-      actif: convention.actif
+      actif: convention.actif,
+      selectedBareme: null,
+      newBareme: {
+        nom: "",
+        typeBareme: "convention",
+        typologie: "",
+        type: "",
+        taux: "",
+        duree: "",
+        periodicite: "",
+        typeEcheancier: "",
+        marge: "",
+        valeurResiduelle: "",
+        valeurReprise: "",
+        premierLoyerMajore: "",
+        premierLoyerType: "sup",
+        codeClient: "",
+        tauxMin: 6,
+        tauxMax: 8,
+        dureeMin: 12,
+        dureeMax: 60
+      }
     });
     setIsDialogOpen(true);
   };
 
   const handleSave = () => {
+    const bareme = formData.selectedBareme || {
+      taux: parseFloat(formData.newBareme.taux || formData.taux),
+      marge: parseFloat(formData.newBareme.marge || formData.marge),
+      valeurResiduelle: parseFloat(formData.newBareme.valeurResiduelle || formData.valeurResiduelle)
+    };
+
     const conventionData: Convention = {
       id: editingConvention?.id || `conv-${Date.now()}`,
       nom: formData.nom,
@@ -237,11 +330,7 @@ const Conventions = () => {
       fournisseurs: [formData.fournisseur],
       prestatairesMaintenace: formData.prestatairesMaintenace,
       categoriesMateriels: formData.categoriesMateriels,
-      bareme: {
-        taux: parseFloat(formData.taux),
-        marge: parseFloat(formData.marge),
-        valeurResiduelle: parseFloat(formData.valeurResiduelle)
-      },
+      bareme,
       dateDebut: new Date(formData.dateDebut),
       dateFin: formData.dateFin ? new Date(formData.dateFin) : undefined,
       reconductionTacite: formData.reconductionTacite,
@@ -361,6 +450,7 @@ const Conventions = () => {
                       <TabsTrigger value="details">Détails</TabsTrigger>
                       <TabsTrigger value="partenaires">Partenaires</TabsTrigger>
                       <TabsTrigger value="baremes">Barèmes</TabsTrigger>
+                      <TabsTrigger value="clientele">Clientèle éligible</TabsTrigger>
                       <TabsTrigger value="apercu">Aperçu</TabsTrigger>
                     </TabsList>
 
@@ -512,138 +602,321 @@ const Conventions = () => {
                     </TabsContent>
 
                     <TabsContent value="baremes" className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="typologie">Typologie *</Label>
-                          <Select value={formData.typologie} onValueChange={(value) => setFormData(prev => ({ ...prev, typologie: value }))}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sélectionner une typologie" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Crédit-Bail">Crédit-Bail</SelectItem>
-                              <SelectItem value="LOA">LOA</SelectItem>
-                              <SelectItem value="LLD">LLD</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="type">Type *</Label>
-                          <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sélectionner un type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="standard">Standard</SelectItem>
-                              <SelectItem value="derogatoire">Dérogatoire</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant={activeBaremeTab === "existing" ? "default" : "outline"}
+                          onClick={() => setActiveBaremeTab("existing")}
+                          className="rounded-full px-6"
+                        >
+                          Barème existant
+                        </Button>
+                        <Button
+                          variant={activeBaremeTab === "new" ? "default" : "outline"}
+                          onClick={() => setActiveBaremeTab("new")}
+                          className="rounded-full px-6"
+                        >
+                          Nouveau barème
+                        </Button>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <Label htmlFor="taux">Taux (%)</Label>
-                          <Input
-                            id="taux"
-                            type="number"
-                            step="0.1"
-                            value={formData.taux}
-                            onChange={(e) => setFormData(prev => ({ ...prev, taux: e.target.value }))}
-                            placeholder="6.5"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="duree">Durée (mois)</Label>
-                          <Input
-                            id="duree"
-                            type="number"
-                            value={formData.duree}
-                            onChange={(e) => setFormData(prev => ({ ...prev, duree: e.target.value }))}
-                            placeholder="36"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="periodicite">Périodicité</Label>
-                          <Select value={formData.periodicite} onValueChange={(value) => setFormData(prev => ({ ...prev, periodicite: value }))}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sélectionner" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="mensuelle">Mensuelle</SelectItem>
-                              <SelectItem value="trimestrielle">Trimestrielle</SelectItem>
-                              <SelectItem value="semestrielle">Semestrielle</SelectItem>
-                              <SelectItem value="annuelle">Annuelle</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <Label htmlFor="typeEcheancier">Type échéancier</Label>
-                          <Select value={formData.typeEcheancier} onValueChange={(value) => setFormData(prev => ({ ...prev, typeEcheancier: value }))}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sélectionner" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="constant">Constant</SelectItem>
-                              <SelectItem value="progressif">Progressif</SelectItem>
-                              <SelectItem value="degressif">Dégressif</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="valeurResiduelle">
-                            {formData.typologie === "LLD" ? "Valeur de reprise (%)" : "Valeur résiduelle (%)"}
-                          </Label>
-                          <Input
-                            id="valeurResiduelle"
-                            type="number"
-                            step="0.1"
-                            value={formData.typologie === "LLD" ? formData.valeurReprise : formData.valeurResiduelle}
-                            onChange={(e) => setFormData(prev => ({ 
-                              ...prev, 
-                              [formData.typologie === "LLD" ? "valeurReprise" : "valeurResiduelle"]: e.target.value 
-                            }))}
-                            placeholder="1.8"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="marge">Marge (%)</Label>
-                          <Input
-                            id="marge"
-                            type="number"
-                            step="0.1"
-                            value={formData.marge}
-                            onChange={(e) => setFormData(prev => ({ ...prev, marge: e.target.value }))}
-                            placeholder="2.8"
-                          />
-                        </div>
-                      </div>
-
-                      {formData.type === "derogatoire" && (
-                        <div>
-                          <Label>1er loyer majoré</Label>
-                          <div className="grid grid-cols-2 gap-2">
-                            <Select value={formData.premierLoyerType} onValueChange={(value) => setFormData(prev => ({ ...prev, premierLoyerType: value }))}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="sup">Supérieur à</SelectItem>
-                                <SelectItem value="inf">Inférieur à</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={formData.premierLoyerMajore}
-                              onChange={(e) => setFormData(prev => ({ ...prev, premierLoyerMajore: e.target.value }))}
-                              placeholder="Valeur"
-                            />
+                      {activeBaremeTab === "existing" && (
+                        <div className="space-y-4">
+                          <p className="text-sm text-muted-foreground">
+                            Sélectionnez un barème existant
+                          </p>
+                          
+                          <div className="space-y-3">
+                            {BAREMES_DISPONIBLES.map((bareme) => (
+                              <Card
+                                key={bareme.id}
+                                className={`cursor-pointer transition-all hover:shadow-md ${
+                                  formData.selectedBareme?.id === bareme.id 
+                                    ? "ring-2 ring-primary border-primary" 
+                                    : "border-border"
+                                }`}
+                                onClick={() => setFormData(prev => ({ ...prev, selectedBareme: bareme }))}
+                              >
+                                <CardContent className="p-4">
+                                  <div className="flex items-center justify-between">
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <h3 className="font-semibold">{bareme.nom}</h3>
+                                      </div>
+                                      <div className="flex gap-4 text-sm">
+                                        <span>Taux: {bareme.taux}%</span>
+                                        <span>Marge: {bareme.marge}%</span>
+                                        <span>VR: {bareme.valeurResiduelle}%</span>
+                                      </div>
+                                    </div>
+                                    <Badge 
+                                      variant={bareme.type === "standard" ? "default" : "secondary"}
+                                      className="capitalize"
+                                    >
+                                      {bareme.type}
+                                    </Badge>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
                           </div>
                         </div>
                       )}
+
+                      {activeBaremeTab === "new" && (
+                        <div className="space-y-4">
+                          <p className="text-sm text-muted-foreground">
+                            Créez un nouveau barème personnalisé
+                          </p>
+                          
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="newBaremeNom">Nom du barème</Label>
+                                <Input
+                                  id="newBaremeNom"
+                                  value={formData.newBareme.nom}
+                                  onChange={(e) => setFormData(prev => ({ 
+                                    ...prev, 
+                                    newBareme: { ...prev.newBareme, nom: e.target.value }
+                                  }))}
+                                  placeholder="Ex: Barème Convention Spécial"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="typeBareme">Type de barème</Label>
+                                <Input
+                                  id="typeBareme"
+                                  value="Convention"
+                                  disabled
+                                  className="bg-gray-100"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="newTypologie">Typologie *</Label>
+                                <Select 
+                                  value={formData.newBareme.typologie} 
+                                  onValueChange={(value) => setFormData(prev => ({ 
+                                    ...prev, 
+                                    newBareme: { ...prev.newBareme, typologie: value }
+                                  }))}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sélectionner une typologie" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Crédit-Bail">Crédit-Bail</SelectItem>
+                                    <SelectItem value="LOA">LOA</SelectItem>
+                                    <SelectItem value="LLD">LLD</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label htmlFor="newType">Type *</Label>
+                                <Select 
+                                  value={formData.newBareme.type} 
+                                  onValueChange={(value) => setFormData(prev => ({ 
+                                    ...prev, 
+                                    newBareme: { ...prev.newBareme, type: value }
+                                  }))}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sélectionner un type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="standard">Standard</SelectItem>
+                                    <SelectItem value="derogatoire">Dérogatoire</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label>Taux (Min: {tauxRange[0]}% - Max: {tauxRange[1]}%)</Label>
+                                <Slider
+                                  value={tauxRange}
+                                  onValueChange={setTauxRange}
+                                  min={0}
+                                  max={20}
+                                  step={0.1}
+                                  className="w-full"
+                                />
+                              </div>
+                              <div>
+                                <Label>Durée (Min: {dureeRange[0]} - Max: {dureeRange[1]} mois)</Label>
+                                <Slider
+                                  value={dureeRange}
+                                  onValueChange={setDureeRange}
+                                  min={6}
+                                  max={120}
+                                  step={1}
+                                  className="w-full"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="newPeriodicite">Périodicité</Label>
+                                <Select 
+                                  value={formData.newBareme.periodicite} 
+                                  onValueChange={(value) => setFormData(prev => ({ 
+                                    ...prev, 
+                                    newBareme: { ...prev.newBareme, periodicite: value }
+                                  }))}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sélectionner" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="mensuelle">Mensuelle</SelectItem>
+                                    <SelectItem value="trimestrielle">Trimestrielle</SelectItem>
+                                    <SelectItem value="semestrielle">Semestrielle</SelectItem>
+                                    <SelectItem value="annuelle">Annuelle</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label htmlFor="newTypeEcheancier">Type échéancier</Label>
+                                <Select 
+                                  value={formData.newBareme.typeEcheancier} 
+                                  onValueChange={(value) => setFormData(prev => ({ 
+                                    ...prev, 
+                                    newBareme: { ...prev.newBareme, typeEcheancier: value }
+                                  }))}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sélectionner" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="constant">Constant</SelectItem>
+                                    <SelectItem value="progressif">Progressif</SelectItem>
+                                    <SelectItem value="degressif">Dégressif</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="newMarge">Marge (%)</Label>
+                                <Input
+                                  id="newMarge"
+                                  type="number"
+                                  step="0.1"
+                                  value={formData.newBareme.marge}
+                                  onChange={(e) => setFormData(prev => ({ 
+                                    ...prev, 
+                                    newBareme: { ...prev.newBareme, marge: e.target.value }
+                                  }))}
+                                  placeholder="2.8"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="newValeurResiduelle">
+                                  {formData.newBareme.typologie === "LLD" ? "Valeur de reprise (%)" : "Valeur résiduelle (%)"}
+                                </Label>
+                                <Input
+                                  id="newValeurResiduelle"
+                                  type="number"
+                                  step="0.1"
+                                  value={formData.newBareme.typologie === "LLD" ? formData.newBareme.valeurReprise : formData.newBareme.valeurResiduelle}
+                                  onChange={(e) => setFormData(prev => ({ 
+                                    ...prev, 
+                                    newBareme: { 
+                                      ...prev.newBareme, 
+                                      [formData.newBareme.typologie === "LLD" ? "valeurReprise" : "valeurResiduelle"]: e.target.value 
+                                    }
+                                  }))}
+                                  placeholder="1.8"
+                                />
+                              </div>
+                            </div>
+
+                            {formData.newBareme.type === "derogatoire" && (
+                              <div>
+                                <Label htmlFor="codeClient">Code client</Label>
+                                <div className="flex gap-2">
+                                  <Input
+                                    id="codeClient"
+                                    value={formData.newBareme.codeClient}
+                                    onChange={(e) => setFormData(prev => ({ 
+                                      ...prev, 
+                                      newBareme: { ...prev.newBareme, codeClient: e.target.value }
+                                    }))}
+                                    placeholder="Rechercher un code client..."
+                                  />
+                                  <Button variant="outline">Rechercher</Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="clientele" className="space-y-4">
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4">Clientèle éligible</h3>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Type de critère</Label>
+                            <Select value={selectedTypeCritere} onValueChange={setSelectedTypeCritere}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner un type de critère" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {TYPES_CRITERES.map(type => (
+                                  <SelectItem key={type.id} value={type.id}>
+                                    {type.nom}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {selectedTypeCritere && (
+                            <div>
+                              <Label>Critères</Label>
+                              <div className="grid grid-cols-2 gap-2 mt-2">
+                                {CRITERES_PAR_TYPE[selectedTypeCritere as keyof typeof CRITERES_PAR_TYPE]?.map(critere => (
+                                  <div key={critere} className="flex items-center space-x-2">
+                                    <input
+                                      type="checkbox"
+                                      id={critere}
+                                      checked={selectedCriteres.includes(critere)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedCriteres(prev => [...prev, critere]);
+                                        } else {
+                                          setSelectedCriteres(prev => prev.filter(c => c !== critere));
+                                        }
+                                      }}
+                                      className="rounded"
+                                    />
+                                    <Label htmlFor={critere} className="text-sm">{critere}</Label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {selectedCriteres.length > 0 && (
+                            <div>
+                              <Label className="text-sm font-medium text-muted-foreground">Critères sélectionnés</Label>
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {selectedCriteres.map(critere => (
+                                  <Badge key={critere} variant="outline">{critere}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </TabsContent>
 
                     <TabsContent value="apercu" className="space-y-4">
@@ -695,63 +968,41 @@ const Conventions = () => {
                           </div>
 
                           <div>
-                            <Label className="text-sm font-medium text-muted-foreground">Configuration Barème</Label>
-                            <div className="grid grid-cols-2 gap-4 mt-2">
-                              <div className="p-3 bg-gray-50 rounded">
-                                <div className="text-sm font-medium">Typologie</div>
-                                <div className="text-lg font-bold">{formData.typologie || "Non définie"}</div>
+                            <Label className="text-sm font-medium text-muted-foreground">Barème sélectionné</Label>
+                            <div className="p-3 bg-gray-50 rounded mt-2">
+                              <div className="text-lg font-bold">
+                                {formData.selectedBareme ? formData.selectedBareme.nom : "Nouveau barème personnalisé"}
                               </div>
-                              <div className="p-3 bg-gray-50 rounded">
-                                <div className="text-sm font-medium">Type</div>
-                                <div className="text-lg font-bold">{formData.type || "Non défini"}</div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div>
-                            <Label className="text-sm font-medium text-muted-foreground">Conditions Financières</Label>
-                            <div className="grid grid-cols-4 gap-4 mt-2">
-                              <div className="text-center p-3 bg-blue-50 rounded">
-                                <div className="text-lg font-bold text-blue-600">{formData.taux || "0"}%</div>
-                                <div className="text-xs text-muted-foreground">Taux</div>
-                              </div>
-                              <div className="text-center p-3 bg-green-50 rounded">
-                                <div className="text-lg font-bold text-green-600">{formData.duree || "0"}</div>
-                                <div className="text-xs text-muted-foreground">Durée (mois)</div>
-                              </div>
-                              <div className="text-center p-3 bg-purple-50 rounded">
-                                <div className="text-lg font-bold text-purple-600">{formData.periodicite || "Non définie"}</div>
-                                <div className="text-xs text-muted-foreground">Périodicité</div>
-                              </div>
-                              <div className="text-center p-3 bg-orange-50 rounded">
-                                <div className="text-lg font-bold text-orange-600">
-                                  {formData.typologie === "LLD" ? (formData.valeurReprise || "0") : (formData.valeurResiduelle || "0")}%
+                              <div className="grid grid-cols-3 gap-4 mt-2">
+                                <div className="text-center">
+                                  <div className="font-medium">Taux</div>
+                                  <div className="text-blue-600">
+                                    {formData.selectedBareme ? `${formData.selectedBareme.taux}%` : `${tauxRange[0]}-${tauxRange[1]}%`}
+                                  </div>
                                 </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {formData.typologie === "LLD" ? "Valeur reprise" : "VR"}
+                                <div className="text-center">
+                                  <div className="font-medium">Marge</div>
+                                  <div className="text-green-600">
+                                    {formData.selectedBareme ? `${formData.selectedBareme.marge}%` : `${formData.newBareme.marge || "0"}%`}
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="font-medium">VR</div>
+                                  <div className="text-purple-600">
+                                    {formData.selectedBareme ? `${formData.selectedBareme.valeurResiduelle}%` : `${formData.newBareme.valeurResiduelle || "0"}%`}
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="text-center p-3 bg-gray-50 rounded">
-                              <div className="text-lg font-bold text-gray-600">{formData.typeEcheancier || "Non défini"}</div>
-                              <div className="text-xs text-muted-foreground">Type échéancier</div>
-                            </div>
-                            <div className="text-center p-3 bg-red-50 rounded">
-                              <div className="text-lg font-bold text-red-600">{formData.marge || "0"}%</div>
-                              <div className="text-xs text-muted-foreground">Marge</div>
-                            </div>
-                          </div>
-
-                          {formData.type === "derogatoire" && formData.premierLoyerMajore && (
+                          {selectedCriteres.length > 0 && (
                             <div>
-                              <Label className="text-sm font-medium text-muted-foreground">1er Loyer Majoré</Label>
-                              <div className="p-3 bg-yellow-50 rounded mt-1">
-                                <div className="text-lg font-bold text-yellow-600">
-                                  {formData.premierLoyerType === "sup" ? "≥ " : "≤ "}{formData.premierLoyerMajore}%
-                                </div>
+                              <Label className="text-sm font-medium text-muted-foreground">Clientèle éligible</Label>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {selectedCriteres.map(critere => (
+                                  <Badge key={critere} variant="outline">{critere}</Badge>
+                                ))}
                               </div>
                             </div>
                           )}

@@ -11,6 +11,7 @@ import Contrats from "./pages/Contrats";
 import Conventions from "./pages/Conventions";
 import Campagnes from "./pages/Campagnes";
 import Bareme from "./pages/Bareme";
+import Materiel from "./pages/Materiel";
 import MonCompte from "./pages/MonCompte";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/conventions" element={<Conventions />} />
           <Route path="/campagnes" element={<Campagnes />} />
           <Route path="/bareme" element={<Bareme />} />
+          <Route path="/materiel" element={<Materiel />} />
           <Route path="/compte" element={<MonCompte />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

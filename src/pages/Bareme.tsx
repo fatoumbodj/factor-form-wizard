@@ -7,9 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { Plus, Edit, Trash2, Percent, Eye, Power, PowerOff } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Edit, Trash2, Calculator, FileText, Search, Calendar } from "lucide-react";
 import { BaremeComplet } from "@/types/leasing";
 import {
   Table,
@@ -46,149 +46,152 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Slider } from "@/components/ui/slider";
+import { Progress } from "@/components/ui/progress";
 
-// Demo data
 const BAREMES_DEMO: BaremeComplet[] = [
   {
     id: "bar-std-001",
-    nom: "Barème Standard Crédit-Bail",
+    nom: "Barème Standard Véhicules",
     type: "standard",
     taux: 7.0,
     marge: 3.0,
     valeurResiduelle: 2.5,
     typologie: "Crédit-Bail",
     dateCreation: new Date("2024-01-01"),
+    dateApplication: new Date("2024-01-15"),
+    dateFin: new Date("2024-12-31"),
+    actif: true
+  },
+  {
+    id: "bar-der-001",
+    nom: "Barème Préférentiel Client VIP",
+    type: "derogatoire",
+    taux: 6.2,
+    marge: 2.5,
+    valeurResiduelle: 2.0,
+    typologie: "LOA",
+    dateCreation: new Date("2024-02-15"),
+    dateApplication: new Date("2024-03-01"),
+    dateFin: new Date("2024-12-31"),
     actif: true
   },
   {
     id: "bar-std-002",
-    nom: "Barème Standard LLD",
+    nom: "Barème Standard Équipement",
     type: "standard",
-    taux: 6.8,
-    marge: 2.8,
-    valeurResiduelle: 0,
+    taux: 7.5,
+    marge: 3.2,
+    valeurResiduelle: 2.8,
     typologie: "LLD",
-    dateCreation: new Date("2024-01-01"),
-    actif: true
+    dateCreation: new Date("2024-03-01"),
+    dateApplication: new Date("2024-03-15"),
+    dateFin: new Date("2024-12-31"),
+    actif: false
   }
 ];
 
-const TYPES_CRITERES = [
-  "Segment",
-  "Secteur d'activité",
-  "Profession",
-  "Groupe client",
-  "Montant de financement",
-  "Durée de financement"
-];
-
-const CRITERES_PAR_TYPE = {
-  segment: ["PME", "Grand Compte", "Corporate", "Particulier", "Micro-entreprise"],
-  secteur: ["Agriculture et agroalimentaire", "Transport et logistique", "Industrie manufacturière", "Commerce et distribution", "Services aux entreprises", "BTP et construction", "Santé et services sociaux", "Education et formation", "Technologies et télécommunications", "Tourisme et hôtellerie"],
-  profession: ["Médecin", "Avocat", "Architecte", "Comptable", "Ingénieur", "Pharmacien", "Vétérinaire", "Dentiste", "Notaire", "Expert-comptable"],
-  groupe_client: ["Groupe A", "Groupe Premium", "Partenaires", "VIP", "Institutionnels"]
-};
-
 const Bareme = () => {
   const [baremes, setBaremes] = useState<BaremeComplet[]>(BAREMES_DEMO);
-  const [isBaremeDialogOpen, setIsBaremeDialogOpen] = useState(false);
-  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [currentTab, setCurrentTab] = useState("standard");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingBareme, setEditingBareme] = useState<BaremeComplet | null>(null);
-  const [viewingBareme, setViewingBareme] = useState<BaremeComplet | null>(null);
-  
-  const [baremeForm, setBaremeForm] = useState({
+  const [tauxRange, setTauxRange] = useState<number[]>([6, 8]);
+  const [dureeRange, setDureeRange] = useState<number[]>([12, 60]);
+  const [tauxDefaut, setTauxDefaut] = useState(7.0);
+  const [dureeDefaut, setDureeDefaut] = useState(36);
+  const [formData, setFormData] = useState({
     nom: "",
-    typologie: "Crédit-Bail",
     type: "standard" as "standard" | "derogatoire",
-    // Taux avec min/max
-    tauxDefaut: "",
-    tauxMin: "",
-    tauxMax: "",
-    // Durée avec min/max et modifiable
-    dureeDefaut: "",
-    dureeMin: "",
-    dureeMax: "",
-    dureeModifiable: false,
-    // Périodicité fixe à mensuel avec modifiable
-    periodiciteModifiable: false,
-    typeEcheancier: "constant",
-    typeEcheancierModifiable: false,
-    // Premier Loyer Majoré avec type et valeur
-    premierLoyerType: "inférieur" as "inférieur" | "supérieur",
-    premierLoyerValeur: "",
-    // Valeur résiduelle (standard) ou Valeur de reprise (dérogatoire)
-    valeurResiduelleSeuil: "",
-    valeurResiduelleType: "inférieur" as "inférieur" | "supérieur",
-    conditions: [] as any[]
+    typologie: "",
+    periodicite: "mensuelle",
+    typeEcheancier: "",
+    marge: "",
+    valeurResiduelle: "",
+    valeurReprise: "",
+    premierLoyerMajore: "",
+    premierLoyerType: "sup",
+    codeClient: "",
+    clientInfo: null as any,
+    dateCreation: new Date().toISOString().split('T')[0],
+    dateApplication: "",
+    dateFin: "",
+    actif: true
   });
 
-  const [conditionForm, setConditionForm] = useState({
-    typeCritere: "",
-    criteres: [] as string[]
-  });
-
-  const resetBaremeForm = () => {
-    setBaremeForm({
+  const resetForm = () => {
+    setFormData({
       nom: "",
-      typologie: "Crédit-Bail",
       type: "standard",
-      tauxDefaut: "",
-      tauxMin: "",
-      tauxMax: "",
-      dureeDefaut: "",
-      dureeMin: "",
-      dureeMax: "",
-      dureeModifiable: false,
-      periodiciteModifiable: false,
-      typeEcheancier: "constant",
-      typeEcheancierModifiable: false,
-      premierLoyerType: "inférieur",
-      premierLoyerValeur: "",
-      valeurResiduelleSeuil: "",
-      valeurResiduelleType: "inférieur",
-      conditions: []
+      typologie: "",
+      periodicite: "mensuelle",
+      typeEcheancier: "",
+      marge: "",
+      valeurResiduelle: "",
+      valeurReprise: "",
+      premierLoyerMajore: "",
+      premierLoyerType: "sup",
+      codeClient: "",
+      clientInfo: null,
+      dateCreation: new Date().toISOString().split('T')[0],
+      dateApplication: "",
+      dateFin: "",
+      actif: true
     });
     setEditingBareme(null);
+    setTauxRange([6, 8]);
+    setDureeRange([12, 60]);
+    setTauxDefaut(7.0);
+    setDureeDefaut(36);
   };
 
-  const addCondition = () => {
-    if (conditionForm.typeCritere && conditionForm.criteres.length > 0) {
-      const newCondition = {
-        id: `cond-${Date.now()}`,
-        typeCritere: conditionForm.typeCritere,
-        criteres: conditionForm.criteres
-      };
-      setBaremeForm(prev => ({
-        ...prev,
-        conditions: [...prev.conditions, newCondition]
-      }));
-      setConditionForm({
-        typeCritere: "",
-        criteres: []
-      });
-    }
+  const handleEdit = (bareme: BaremeComplet) => {
+    setEditingBareme(bareme);
+    setFormData({
+      nom: bareme.nom,
+      type: bareme.type,
+      typologie: bareme.typologie || "",
+      periodicite: "mensuelle",
+      typeEcheancier: "",
+      marge: bareme.marge.toString(),
+      valeurResiduelle: bareme.valeurResiduelle.toString(),
+      valeurReprise: "",
+      premierLoyerMajore: "",
+      premierLoyerType: "sup",
+      codeClient: "",
+      clientInfo: null,
+      dateCreation: bareme.dateCreation.toISOString().split('T')[0],
+      dateApplication: bareme.dateApplication?.toISOString().split('T')[0] || "",
+      dateFin: bareme.dateFin?.toISOString().split('T')[0] || "",
+      actif: bareme.actif
+    });
+    setTauxRange([bareme.tauxMin || 6, bareme.tauxMax || 8]);
+    setDureeRange([bareme.dureeMin || 12, bareme.dureeMax || 60]);
+    setTauxDefaut(bareme.tauxDefaut || bareme.taux);
+    setDureeDefaut(bareme.dureeDefaut || 36);
+    setIsDialogOpen(true);
   };
 
-  const removeCondition = (index: number) => {
-    setBaremeForm(prev => ({
-      ...prev,
-      conditions: prev.conditions.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handleSaveBareme = () => {
+  const handleSave = () => {
     const baremeData: BaremeComplet = {
       id: editingBareme?.id || `bar-${Date.now()}`,
-      nom: baremeForm.nom,
-      type: baremeForm.type,
-      taux: parseFloat(baremeForm.tauxDefaut),
-      marge: 0, // Marge supprimée, mise à 0
-      valeurResiduelle: parseFloat(baremeForm.valeurResiduelleSeuil || "0"),
-      typologie: baremeForm.typologie,
-      conditions: baremeForm.type === "derogatoire" ? baremeForm.conditions : undefined,
-      dateCreation: editingBareme?.dateCreation || new Date(),
+      nom: formData.nom,
+      type: formData.type,
+      taux: tauxDefaut,
+      tauxDefaut: tauxDefaut,
+      tauxMin: tauxRange[0],
+      tauxMax: tauxRange[1],
+      dureeDefaut: dureeDefaut,
+      dureeMin: dureeRange[0],
+      dureeMax: dureeRange[1],
+      marge: parseFloat(formData.marge),
+      valeurResiduelle: parseFloat(formData.valeurResiduelle),
+      typologie: formData.typologie,
+      dateCreation: new Date(formData.dateCreation),
+      dateApplication: formData.dateApplication ? new Date(formData.dateApplication) : undefined,
+      dateFin: formData.dateFin ? new Date(formData.dateFin) : undefined,
       dateModification: editingBareme ? new Date() : undefined,
-      actif: true
+      actif: formData.actif
     };
 
     if (editingBareme) {
@@ -197,27 +200,43 @@ const Bareme = () => {
       setBaremes(prev => [...prev, baremeData]);
     }
 
-    setIsBaremeDialogOpen(false);
-    resetBaremeForm();
+    setIsDialogOpen(false);
+    resetForm();
   };
 
-  const handleToggleBaremeStatus = (id: string) => {
-    setBaremes(prev => prev.map(b => 
-      b.id === id ? { ...b, actif: !b.actif, dateModification: new Date() } : b
-    ));
+  const handleDelete = (id: string) => {
+    setBaremes(prev => prev.filter(b => b.id !== id));
   };
 
-  const handleViewBareme = (bareme: BaremeComplet) => {
-    setViewingBareme(bareme);
-    setIsDetailDialogOpen(true);
+  const handleSearchClient = () => {
+    // Simulation de recherche client
+    if (formData.codeClient) {
+      const mockClientInfo = {
+        nom: "Dupont",
+        prenom: "Jean",
+        adresse: "123 Rue de la Paix, Dakar",
+        telephone: "+221 77 123 45 67",
+        email: "jean.dupont@email.com"
+      };
+      setFormData(prev => ({ ...prev, clientInfo: mockClientInfo }));
+    }
   };
 
-  const getTypeColor = (type: string) => {
-    return type === "standard" ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800";
+  const getFilteredBaremes = () => {
+    switch (currentTab) {
+      case "standard":
+        return baremes.filter(b => b.type === "standard");
+      case "derogatoire":
+        return baremes.filter(b => b.type === "derogatoire");
+      case "inactif":
+        return baremes.filter(b => !b.actif);
+      default:
+        return baremes;
+    }
   };
 
-  const getTypologieColor = (typologie: string) => {
-    return typologie === "Crédit-Bail" ? "bg-green-100 text-green-800" : "bg-purple-100 text-purple-800";
+  const getStatutColor = (actif: boolean) => {
+    return actif ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800";
   };
 
   return (
@@ -231,20 +250,17 @@ const Bareme = () => {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-                  <Percent className="h-8 w-8 text-indigo-500" />
+                  <Calculator className="h-8 w-8 text-blue-500" />
                   Gestion des Barèmes
                 </h1>
                 <p className="text-muted-foreground mt-2">
-                  Configuration et gestion des barèmes de financement
+                  Configurez et gérez les barèmes de financement pour vos offres de leasing
                 </p>
               </div>
-            </div>
-
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">Liste des Barèmes</h2>
-              <Dialog open={isBaremeDialogOpen} onOpenChange={setIsBaremeDialogOpen}>
+              
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={resetBaremeForm}>
+                  <Button onClick={resetForm}>
                     <Plus className="h-4 w-4 mr-2" />
                     Nouveau Barème
                   </Button>
@@ -255,39 +271,24 @@ const Bareme = () => {
                       {editingBareme ? "Modifier le Barème" : "Nouveau Barème"}
                     </DialogTitle>
                     <DialogDescription>
-                      Configurez les paramètres du barème de financement
+                      Configurez les paramètres financiers du barème
                     </DialogDescription>
                   </DialogHeader>
                   
                   <div className="space-y-6">
-                    {/* Nom */}
-                    <div>
-                      <Label htmlFor="nom">Nom du barème *</Label>
-                      <Input
-                        id="nom"
-                        value={baremeForm.nom}
-                        onChange={(e) => setBaremeForm(prev => ({ ...prev, nom: e.target.value }))}
-                        placeholder="Ex: Barème PME Privilégiées"
-                      />
-                    </div>
-
-                    {/* Typologie et Type */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="typologie">Typologie *</Label>
-                        <Select value={baremeForm.typologie} onValueChange={(value) => setBaremeForm(prev => ({ ...prev, typologie: value }))}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Crédit-Bail">Crédit-Bail / LOA</SelectItem>
-                            <SelectItem value="LLD">LLD (Location Longue Durée)</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Label htmlFor="nom">Nom du barème *</Label>
+                        <Input
+                          id="nom"
+                          value={formData.nom}
+                          onChange={(e) => setFormData(prev => ({ ...prev, nom: e.target.value }))}
+                          placeholder="Ex: Barème Standard Véhicules"
+                        />
                       </div>
                       <div>
-                        <Label htmlFor="type">Type *</Label>
-                        <Select value={baremeForm.type} onValueChange={(value: "standard" | "derogatoire") => setBaremeForm(prev => ({ ...prev, type: value }))}>
+                        <Label htmlFor="type">Type de barème *</Label>
+                        <Select value={formData.type} onValueChange={(value: "standard" | "derogatoire") => setFormData(prev => ({ ...prev, type: value }))}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
@@ -299,313 +300,304 @@ const Bareme = () => {
                       </div>
                     </div>
 
-                    {/* Taux (%) */}
-                    <div>
-                      <Label>Taux (%)</Label>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <Label htmlFor="tauxDefaut" className="text-sm text-muted-foreground">Taux par défaut</Label>
-                          <Input
-                            id="tauxDefaut"
-                            type="number"
-                            step="0.1"
-                            value={baremeForm.tauxDefaut}
-                            onChange={(e) => setBaremeForm(prev => ({ ...prev, tauxDefaut: e.target.value }))}
-                            placeholder="7.5"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="tauxMin" className="text-sm text-muted-foreground">Taux min</Label>
-                          <Input
-                            id="tauxMin"
-                            type="number"
-                            step="0.1"
-                            value={baremeForm.tauxMin}
-                            onChange={(e) => setBaremeForm(prev => ({ ...prev, tauxMin: e.target.value }))}
-                            placeholder="5.0"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="tauxMax" className="text-sm text-muted-foreground">Taux max</Label>
-                          <Input
-                            id="tauxMax"
-                            type="number"
-                            step="0.1"
-                            value={baremeForm.tauxMax}
-                            onChange={(e) => setBaremeForm(prev => ({ ...prev, tauxMax: e.target.value }))}
-                            placeholder="12.0"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Durée (mois) */}
-                    <div>
-                      <Label>Durée (mois)</Label>
-                      <div className="grid grid-cols-4 gap-4">
-                        <div>
-                          <Label htmlFor="dureeDefaut" className="text-sm text-muted-foreground">Durée par défaut</Label>
-                          <Input
-                            id="dureeDefaut"
-                            type="number"
-                            value={baremeForm.dureeDefaut}
-                            onChange={(e) => setBaremeForm(prev => ({ ...prev, dureeDefaut: e.target.value }))}
-                            placeholder="36"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="dureeMin" className="text-sm text-muted-foreground">Durée min</Label>
-                          <Input
-                            id="dureeMin"
-                            type="number"
-                            value={baremeForm.dureeMin}
-                            onChange={(e) => setBaremeForm(prev => ({ ...prev, dureeMin: e.target.value }))}
-                            placeholder="12"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="dureeMax" className="text-sm text-muted-foreground">Durée max</Label>
-                          <Input
-                            id="dureeMax"
-                            type="number"
-                            value={baremeForm.dureeMax}
-                            onChange={(e) => setBaremeForm(prev => ({ ...prev, dureeMax: e.target.value }))}
-                            placeholder="60"
-                          />
-                        </div>
-                        <div className="flex flex-col justify-end">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="dureeModifiable"
-                              checked={baremeForm.dureeModifiable}
-                              onCheckedChange={(checked) => setBaremeForm(prev => ({ ...prev, dureeModifiable: checked as boolean }))}
-                            />
-                            <Label htmlFor="dureeModifiable" className="text-sm">Modifiable</Label>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Périodicité par défaut et Type échéancier */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>Périodicité par défaut</Label>
-                        <div className="flex items-center space-x-4">
-                          <Input
-                            value="Mensuel"
-                            readOnly
-                            className="bg-gray-50"
-                          />
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="periodiciteModifiable"
-                              checked={baremeForm.periodiciteModifiable}
-                              onCheckedChange={(checked) => setBaremeForm(prev => ({ ...prev, periodiciteModifiable: checked as boolean }))}
-                            />
-                            <Label htmlFor="periodiciteModifiable" className="text-sm">Modifiable</Label>
-                          </div>
-                        </div>
+                        <Label htmlFor="typologie">Typologie *</Label>
+                        <Select value={formData.typologie} onValueChange={(value) => setFormData(prev => ({ ...prev, typologie: value }))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une typologie" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Crédit-Bail">Crédit-Bail</SelectItem>
+                            <SelectItem value="LOA">LOA</SelectItem>
+                            <SelectItem value="LLD">LLD</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
-                        <Label htmlFor="typeEcheancier">Type échéancier</Label>
-                        <div className="flex items-center space-x-4">
-                          <Select value={baremeForm.typeEcheancier} onValueChange={(value) => setBaremeForm(prev => ({ ...prev, typeEcheancier: value }))}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="constant">Constant</SelectItem>
-                              <SelectItem value="progressif">Progressif</SelectItem>
-                              <SelectItem value="degressif">Dégressif</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="typeEcheancierModifiable"
-                              checked={baremeForm.typeEcheancierModifiable}
-                              onCheckedChange={(checked) => setBaremeForm(prev => ({ ...prev, typeEcheancierModifiable: checked as boolean }))}
+                        <Label htmlFor="periodicite">Périodicité</Label>
+                        <Select value={formData.periodicite} onValueChange={(value) => setFormData(prev => ({ ...prev, periodicite: value }))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="mensuelle">Mensuelle</SelectItem>
+                            <SelectItem value="trimestrielle">Trimestrielle</SelectItem>
+                            <SelectItem value="semestrielle">Semestrielle</SelectItem>
+                            <SelectItem value="annuelle">Annuelle</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Configuration du Taux</Label>
+                        <div className="space-y-4 p-4 border rounded-lg">
+                          <div>
+                            <Label>Plage autorisée (Min: {tauxRange[0]}% - Max: {tauxRange[1]}%)</Label>
+                            <Slider
+                              value={tauxRange}
+                              onValueChange={setTauxRange}
+                              min={0}
+                              max={20}
+                              step={0.1}
+                              className="w-full mt-2"
                             />
-                            <Label htmlFor="typeEcheancierModifiable" className="text-sm">Modifiable</Label>
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="tauxDefaut">Taux par défaut (%) *</Label>
+                            <Input
+                              id="tauxDefaut"
+                              type="number"
+                              step="0.1"
+                              min={tauxRange[0]}
+                              max={tauxRange[1]}
+                              value={tauxDefaut}
+                              onChange={(e) => setTauxDefaut(parseFloat(e.target.value) || 0)}
+                              placeholder="7.0"
+                            />
+                            <div className="mt-2">
+                              <Progress
+                                value={tauxDefaut}
+                                defaultValue={tauxDefaut}
+                                min={tauxRange[0]}
+                                max={tauxRange[1]}
+                                showDefaultIndicator={true}
+                                className="w-full"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label>Configuration de la Durée</Label>
+                        <div className="space-y-4 p-4 border rounded-lg">
+                          <div>
+                            <Label>Plage autorisée (Min: {dureeRange[0]} - Max: {dureeRange[1]} mois)</Label>
+                            <Slider
+                              value={dureeRange}
+                              onValueChange={setDureeRange}
+                              min={6}
+                              max={120}
+                              step={1}
+                              className="w-full mt-2"
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="dureeDefaut">Durée par défaut (mois) *</Label>
+                            <Input
+                              id="dureeDefaut"
+                              type="number"
+                              min={dureeRange[0]}
+                              max={dureeRange[1]}
+                              value={dureeDefaut}
+                              onChange={(e) => setDureeDefaut(parseInt(e.target.value) || 0)}
+                              placeholder="36"
+                            />
+                            <div className="mt-2">
+                              <Progress
+                                value={dureeDefaut}
+                                defaultValue={dureeDefaut}
+                                min={dureeRange[0]}
+                                max={dureeRange[1]}
+                                showDefaultIndicator={true}
+                                className="w-full"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Premier Loyer Majoré */}
                     <div>
-                      <Label>Premier Loyer Majoré</Label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-sm text-muted-foreground">Type</Label>
-                          <Select 
-                            value={baremeForm.premierLoyerType} 
-                            onValueChange={(value: "inférieur" | "supérieur") => setBaremeForm(prev => ({ 
-                              ...prev, 
-                              premierLoyerType: value 
-                            }))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="inférieur">Inférieur</SelectItem>
-                              <SelectItem value="supérieur">Supérieur</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label className="text-sm text-muted-foreground">Valeur (%)</Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={baremeForm.premierLoyerValeur}
-                            onChange={(e) => setBaremeForm(prev => ({ 
-                              ...prev, 
-                              premierLoyerValeur: e.target.value 
-                            }))}
-                            placeholder="10.0"
-                          />
-                        </div>
+                      <Label htmlFor="typeEcheancier">Type échéancier</Label>
+                      <Select value={formData.typeEcheancier} onValueChange={(value) => setFormData(prev => ({ ...prev, typeEcheancier: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="constant">Constant</SelectItem>
+                          <SelectItem value="progressif">Progressif</SelectItem>
+                          <SelectItem value="degressif">Dégressif</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="dateCreation">Date de création *</Label>
+                        <Input
+                          id="dateCreation"
+                          type="date"
+                          value={formData.dateCreation}
+                          onChange={(e) => setFormData(prev => ({ ...prev, dateCreation: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="dateApplication">Date d'application</Label>
+                        <Input
+                          id="dateApplication"
+                          type="date"
+                          value={formData.dateApplication}
+                          onChange={(e) => setFormData(prev => ({ ...prev, dateApplication: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="dateFin">Date de fin</Label>
+                        <Input
+                          id="dateFin"
+                          type="date"
+                          value={formData.dateFin}
+                          onChange={(e) => setFormData(prev => ({ ...prev, dateFin: e.target.value }))}
+                        />
                       </div>
                     </div>
 
-                    {/* Valeur résiduelle (standard) ou Valeur de reprise (dérogatoire) */}
-                    <div>
-                      <Label>
-                        {baremeForm.typologie === "LLD" ? "Valeur de reprise" : "Valeur résiduelle"}
-                      </Label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-sm text-muted-foreground">Type</Label>
-                          <Select 
-                            value={baremeForm.valeurResiduelleType} 
-                            onValueChange={(value: "inférieur" | "supérieur") => setBaremeForm(prev => ({ 
-                              ...prev, 
-                              valeurResiduelleType: value 
-                            }))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="inférieur">Inférieur</SelectItem>
-                              <SelectItem value="supérieur">Supérieur</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label className="text-sm text-muted-foreground">Valeur (%)</Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={baremeForm.valeurResiduelleSeuil}
-                            onChange={(e) => setBaremeForm(prev => ({ 
-                              ...prev, 
-                              valeurResiduelleSeuil: e.target.value 
-                            }))}
-                            placeholder="30"
-                          />
-                        </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="valeurResiduelle">
+                          {formData.typologie === "LLD" ? "Valeur de reprise (%)" : "Valeur résiduelle (%)"}
+                        </Label>
+                        <Input
+                          id="valeurResiduelle"
+                          type="number"
+                          step="0.1"
+                          value={formData.typologie === "LLD" ? formData.valeurReprise : formData.valeurResiduelle}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            [formData.typologie === "LLD" ? "valeurReprise" : "valeurResiduelle"]: e.target.value 
+                          }))}
+                          placeholder="1.8"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="marge">Marge (%)</Label>
+                        <Input
+                          id="marge"
+                          type="number"
+                          step="0.1"
+                          value={formData.marge}
+                          onChange={(e) => setFormData(prev => ({ ...prev, marge: e.target.value }))}
+                          placeholder="2.8"
+                        />
                       </div>
                     </div>
 
-                    {/* Champs spécifiques aux barèmes dérogatoires */}
-                    {baremeForm.type === "derogatoire" && (
+                    {formData.type === "derogatoire" && (
                       <div className="space-y-4">
-                        {/* Conditions Applicables - Modifié */}
                         <div>
-                          <Label>Conditions Applicables</Label>
-                          <Card className="p-4">
-                            <div className="space-y-4">
+                          <Label htmlFor="codeClient">Code client</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="codeClient"
+                              value={formData.codeClient}
+                              onChange={(e) => setFormData(prev => ({ ...prev, codeClient: e.target.value }))}
+                              placeholder="Rechercher un code client..."
+                            />
+                            <Button variant="outline" onClick={handleSearchClient}>
+                              <Search className="h-4 w-4 mr-2" />
+                              Rechercher
+                            </Button>
+                          </div>
+                        </div>
+
+                        {formData.clientInfo && (
+                          <Card>
+                            <CardHeader>
+                              <CardTitle className="text-lg">Informations Client</CardTitle>
+                            </CardHeader>
+                            <CardContent>
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                  <Label htmlFor="typeCritere">Type de critère</Label>
-                                  <Select
-                                    value={conditionForm.typeCritere}
-                                    onValueChange={(value) => setConditionForm(prev => ({ ...prev, typeCritere: value, criteres: [] }))}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Sélectionner un type de critère" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {TYPES_CRITERES.map(type => (
-                                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                  <Label className="text-sm font-medium text-muted-foreground">Nom et Prénom</Label>
+                                  <p className="font-medium">{formData.clientInfo.nom} {formData.clientInfo.prenom}</p>
                                 </div>
                                 <div>
-                                  <Label>Critères</Label>
-                                  <div className="space-y-2">
-                                    {conditionForm.typeCritere && (
-                                      <div className="max-h-32 overflow-y-auto border rounded p-2">
-                                        {CRITERES_PAR_TYPE.segment.map(critere => (
-                                          <div key={critere} className="flex items-center space-x-2">
-                                            <Checkbox
-                                              id={`critere-${critere}`}
-                                              checked={conditionForm.criteres.includes(critere)}
-                                              onCheckedChange={(checked) => {
-                                                if (checked) {
-                                                  setConditionForm(prev => ({
-                                                    ...prev,
-                                                    criteres: [...prev.criteres, critere]
-                                                  }));
-                                                } else {
-                                                  setConditionForm(prev => ({
-                                                    ...prev,
-                                                    criteres: prev.criteres.filter(c => c !== critere)
-                                                  }));
-                                                }
-                                              }}
-                                            />
-                                            <Label htmlFor={`critere-${critere}`} className="text-sm">{critere}</Label>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
+                                  <Label className="text-sm font-medium text-muted-foreground">Téléphone</Label>
+                                  <p className="font-medium">{formData.clientInfo.telephone}</p>
+                                </div>
+                                <div>
+                                  <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                                  <p className="font-medium">{formData.clientInfo.email}</p>
+                                </div>
+                                <div>
+                                  <Label className="text-sm font-medium text-muted-foreground">Adresse</Label>
+                                  <p className="font-medium">{formData.clientInfo.adresse}</p>
                                 </div>
                               </div>
-
-                              <Button type="button" onClick={addCondition} variant="outline" size="sm">
-                                Nouvelle condition
-                              </Button>
-                            </div>
+                            </CardContent>
                           </Card>
+                        )}
 
-                          {/* Liste des conditions ajoutées */}
-                          {baremeForm.conditions.length > 0 && (
-                            <div className="space-y-2 mt-4">
-                              <h4 className="text-sm font-medium">Conditions ajoutées :</h4>
-                              {baremeForm.conditions.map((condition, index) => (
-                                <div key={index} className="flex items-center justify-between p-2 border rounded">
-                                  <div>
-                                    <span className="font-medium">{condition.typeCritere}</span>
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                      {condition.criteres.map((critere, i) => (
-                                        <Badge key={i} variant="secondary" className="text-xs">
-                                          {critere}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <Button variant="ghost" size="sm" onClick={() => removeCondition(index)}>
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                        <div>
+                          <Label>1er loyer majoré</Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Select value={formData.premierLoyerType} onValueChange={(value) => setFormData(prev => ({ ...prev, premierLoyerType: value }))}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="sup">Supérieur à</SelectItem>
+                                <SelectItem value="inf">Inférieur à</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={formData.premierLoyerMajore}
+                              onChange={(e) => setFormData(prev => ({ ...prev, premierLoyerMajore: e.target.value }))}
+                              placeholder="Valeur (%)"
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
+
+                    {/* Aperçu */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Aperçu du Barème</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-4 gap-4">
+                          <div className="text-center p-3 bg-blue-50 rounded">
+                            <div className="text-lg font-bold text-blue-600">
+                              {tauxDefaut}%
+                            </div>
+                            <div className="text-xs text-muted-foreground">Taux par défaut</div>
+                          </div>
+                          <div className="text-center p-3 bg-green-50 rounded">
+                            <div className="text-lg font-bold text-green-600">
+                              {dureeDefaut} mois
+                            </div>
+                            <div className="text-xs text-muted-foreground">Durée par défaut</div>
+                          </div>
+                          <div className="text-center p-3 bg-purple-50 rounded">
+                            <div className="text-lg font-bold text-purple-600">
+                              {formData.typologie === "LLD" ? (formData.valeurReprise || "0") : (formData.valeurResiduelle || "0")}%
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {formData.typologie === "LLD" ? "Valeur reprise" : "VR"}
+                            </div>
+                          </div>
+                          <div className="text-center p-3 bg-red-50 rounded">
+                            <div className="text-lg font-bold text-red-600">{formData.marge || "0"}%</div>
+                            <div className="text-xs text-muted-foreground">Marge</div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
 
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsBaremeDialogOpen(false)}>
+                    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Annuler
                     </Button>
-                    <Button onClick={handleSaveBareme}>
+                    <Button onClick={handleSave}>
                       {editingBareme ? "Modifier" : "Créer"}
                     </Button>
                   </DialogFooter>
@@ -613,224 +605,139 @@ const Bareme = () => {
               </Dialog>
             </div>
 
-            <Card>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Barème</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Typologie</TableHead>
-                      <TableHead>Taux</TableHead>
-                      <TableHead>Conditions</TableHead>
-                      <TableHead>Statut</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {baremes.map((bareme) => (
-                      <TableRow key={bareme.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{bareme.nom}</div>
-                            <div className="text-xs text-muted-foreground">
-                              Créé le {bareme.dateCreation.toLocaleDateString()}
-                              {bareme.dateModification && (
-                                <span> • Modifié le {bareme.dateModification.toLocaleDateString()}</span>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getTypeColor(bareme.type)}>
-                            {bareme.type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getTypologieColor(bareme.typologie || "")}>
-                            {bareme.typologie}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div>Taux: {bareme.taux}%</div>
-                            <div>
-                              {bareme.typologie === "LLD" ? "Reprise" : "VR"}: {bareme.valeurResiduelle}%
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {bareme.conditions && bareme.conditions.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {bareme.conditions.map(condition => (
-                                <Badge key={condition.id} variant="outline" className="text-xs">
-                                  {condition.typeCritere}
-                                </Badge>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">Aucune</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={bareme.actif ? "default" : "secondary"}>
-                            {bareme.actif ? "Actif" : "Inactif"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1 flex-wrap">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleViewBareme(bareme)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleToggleBaremeStatus(bareme.id)}
-                              className={bareme.actif ? "text-red-600" : "text-green-600"}
-                            >
-                              {bareme.actif ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Supprimer le barème</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Êtes-vous sûr de vouloir supprimer le barème "{bareme.nom}" ? 
-                                    Cette action est irréversible.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                  <AlertDialogAction 
-                                    onClick={() => setBaremes(prev => prev.filter(b => b.id !== bareme.id))}
-                                    className="bg-red-600 hover:bg-red-700"
+            <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
+              <TabsList>
+                <TabsTrigger value="standard">Barèmes Standard</TabsTrigger>
+                <TabsTrigger value="derogatoire">Dérogatoires</TabsTrigger>
+                <TabsTrigger value="inactif">Inactifs</TabsTrigger>
+              </TabsList>
+
+              {["standard", "derogatoire", "inactif"].map(tab => (
+                <TabsContent key={tab} value={tab}>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>
+                        {tab === "standard" && "Barèmes standards"}
+                        {tab === "derogatoire" && "Barèmes dérogatoires"}
+                        {tab === "inactif" && "Barèmes inactifs"}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Barème</TableHead>
+                            <TableHead>Typologie</TableHead>
+                            <TableHead>Paramètres financiers</TableHead>
+                            <TableHead>Dates</TableHead>
+                            <TableHead>Statut</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {getFilteredBaremes().map((bareme) => (
+                            <TableRow key={bareme.id}>
+                              <TableCell>
+                                <div>
+                                  <div className="font-medium">{bareme.nom}</div>
+                                  <Badge 
+                                    variant={bareme.type === "standard" ? "default" : "secondary"}
+                                    className="text-xs mt-1"
                                   >
-                                    Supprimer
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            {/* Barème Detail Dialog */}
-            <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-              <DialogContent className="max-w-3xl">
-                <DialogHeader>
-                  <DialogTitle>Détails du Barème</DialogTitle>
-                </DialogHeader>
-                {viewingBareme && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Nom</Label>
-                        <p className="font-medium">{viewingBareme.nom}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Type</Label>
-                        <Badge className={getTypeColor(viewingBareme.type)}>
-                          {viewingBareme.type}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Typologie</Label>
-                        <Badge className={getTypologieColor(viewingBareme.typologie || "")}>
-                          {viewingBareme.typologie}
-                        </Badge>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Statut</Label>
-                        <Badge variant={viewingBareme.actif ? "default" : "secondary"}>
-                          {viewingBareme.actif ? "Actif" : "Inactif"}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Paramètres Financiers</Label>
-                      <div className="grid grid-cols-2 gap-4 mt-2">
-                        <div className="text-center p-4 bg-blue-50 rounded">
-                          <div className="text-2xl font-bold text-blue-600">{viewingBareme.taux}%</div>
-                          <div className="text-sm text-muted-foreground">Taux</div>
-                        </div>
-                        <div className="text-center p-4 bg-orange-50 rounded">
-                          <div className="text-2xl font-bold text-orange-600">{viewingBareme.valeurResiduelle}%</div>
-                          <div className="text-sm text-muted-foreground">
-                            {viewingBareme.typologie === "LLD" ? "Valeur de reprise" : "Valeur résiduelle"}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {viewingBareme.conditions && viewingBareme.conditions.length > 0 && (
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Conditions Applicables</Label>
-                        <div className="space-y-2 mt-2">
-                          {viewingBareme.conditions.map(condition => (
-                            <Card key={condition.id}>
-                              <CardContent className="pt-4">
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <h4 className="font-medium">{condition.typeCritere}</h4>
-                                    <div className="flex flex-wrap gap-1 mt-2">
-                                      {condition.criteres.map((critere, index) => (
-                                        <Badge key={index} variant="secondary" className="text-xs">
-                                          {critere}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
+                                    {bareme.type}
+                                  </Badge>
                                 </div>
-                              </CardContent>
-                            </Card>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {bareme.typologie || "Non définie"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm">
+                                  <div>Taux: {bareme.taux}%</div>
+                                  <div>Marge: {bareme.marge}%</div>
+                                  <div>VR: {bareme.valeurResiduelle}%</div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm">
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    Créé: {bareme.dateCreation.toLocaleDateString()}
+                                  </div>
+                                  {bareme.dateApplication && (
+                                    <div className="text-xs text-muted-foreground">
+                                      App: {bareme.dateApplication.toLocaleDateString()}
+                                    </div>
+                                  )}
+                                  {bareme.dateFin && (
+                                    <div className="text-xs text-muted-foreground">
+                                      Fin: {bareme.dateFin.toLocaleDateString()}
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={getStatutColor(bareme.actif)}>
+                                  {bareme.actif ? "Actif" : "Inactif"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-1 flex-wrap">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleEdit(bareme)}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                  </Button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-red-600 hover:text-red-700"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Supprimer le barème</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Êtes-vous sûr de vouloir supprimer le barème "{bareme.nom}" ? 
+                                          Cette action est irréversible.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                        <AlertDialogAction 
+                                          onClick={() => handleDelete(bareme.id)}
+                                          className="bg-red-600 hover:bg-red-700"
+                                        >
+                                          Supprimer
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
+                              </TableCell>
+                            </TableRow>
                           ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Date de création</Label>
-                        <p>{viewingBareme.dateCreation.toLocaleDateString()}</p>
-                      </div>
-                      {viewingBareme.dateModification && (
-                        <div>
-                          <Label className="text-sm font-medium text-muted-foreground">Dernière modification</Label>
-                          <p>{viewingBareme.dateModification.toLocaleDateString()}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
-                    Fermer
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              ))}
+            </Tabs>
           </main>
         </div>
       </div>

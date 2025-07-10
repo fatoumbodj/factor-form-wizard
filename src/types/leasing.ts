@@ -57,11 +57,19 @@ export interface BaremeComplet {
   nom: string;
   type: "standard" | "derogatoire";
   taux: number;
+  tauxDefaut?: number;
+  tauxMin?: number;
+  tauxMax?: number;
+  dureeDefaut?: number;
+  dureeMin?: number;
+  dureeMax?: number;
   marge: number;
   valeurResiduelle: number;
   typologie?: string; // "Crédit-Bail" | "LLD"
   conditions?: ConditionBareme[];
   dateCreation: Date;
+  dateApplication?: Date;
+  dateFin?: Date;
   dateModification?: Date;
   actif: boolean;
 }

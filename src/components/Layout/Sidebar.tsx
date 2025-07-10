@@ -1,5 +1,5 @@
 
-import { Building, Users, FileText, Settings, Calculator, Handshake, Zap, Percent } from "lucide-react";
+import { Building, Users, FileText, Settings, Calculator, Handshake, Zap, Percent, Package } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -30,6 +30,12 @@ const menuItems = [
     icon: FileText,
     url: "/contrats",
     color: "text-green-500",
+  },
+  {
+    title: "Matériel",
+    icon: Package,
+    url: "/materiel",
+    color: "text-cyan-500",
   },
   {
     title: "Conventions",
