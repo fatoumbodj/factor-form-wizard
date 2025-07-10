@@ -38,6 +38,31 @@ interface MaterialTableManagerProps {
   onMaterialsChange: (materials: MaterialData[]) => void;
 }
 
+// Données de référence pour la simulation
+const REFERENCES_DATA = {
+  "senegal-auto": {
+    "Véhicules particuliers": [
+      { ref: "SA-VP-001", designation: "Toyota Corolla 2023", montantHT: 15000000 },
+      { ref: "SA-VP-002", designation: "Nissan Sentra 2023", montantHT: 12000000 },
+      { ref: "SA-VP-003", designation: "Hyundai Accent 2023", montantHT: 11500000 }
+    ],
+    "Véhicules utilitaires": [
+      { ref: "SA-VU-001", designation: "Toyota Hilux 2023", montantHT: 20000000 },
+      { ref: "SA-VU-002", designation: "Ford Ranger 2023", montantHT: 22000000 }
+    ]
+  },
+  "babacar-fils": {
+    "Véhicules particuliers": [
+      { ref: "BF-VP-001", designation: "Peugeot 308 2023", montantHT: 16000000 },
+      { ref: "BF-VP-002", designation: "Renault Clio 2023", montantHT: 13000000 }
+    ],
+    "Matériels industriels": [
+      { ref: "BF-MI-001", designation: "Groupe électrogène 100KVA", montantHT: 8000000 },
+      { ref: "BF-MI-002", designation: "Compresseur industriel", montantHT: 5000000 }
+    ]
+  }
+};
+
 const MaterialTableManager = ({ 
   materials, 
   onMaterialsChange
@@ -70,14 +95,36 @@ const MaterialTableManager = ({
     );
   };
 
+  // Récupérer les références disponibles selon le fournisseur et la catégorie
+  const getAvailableReferences = () => {
+    if (!newMaterial.fournisseur || !newMaterial.categorie) return [];
+    return REFERENCES_DATA[newMaterial.fournisseur as keyof typeof REFERENCES_DATA]?.[newMaterial.categorie] || [];
+  };
+
+  // Gérer la sélection d'une référence
+  const handleReferenceSelect = (refValue: string) => {
+    const availableRefs = getAvailableReferences();
+    const selectedRef = availableRefs.find(item => item.ref === refValue);
+    
+    if (selectedRef) {
+      setNewMaterial(prev => ({
+        ...prev,
+        reference: selectedRef.ref,
+        designation: selectedRef.designation,
+        montantHT: selectedRef.montantHT
+      }));
+    }
+  };
+
   const handleAddMaterial = () => {
-    if (!newMaterial.fournisseur || !newMaterial.designation || !newMaterial.categorie) {
+    if (!newMaterial.fournisseur || !newMaterial.designation || !newMaterial.categorie || !newMaterial.reference) {
+      alert("Veuillez remplir tous les champs obligatoires");
       return;
     }
 
     const material: MaterialData = {
       id: Date.now().toString(),
-      referenceMateriel: newMaterial.reference || `MAT-${Date.now()}`,
+      referenceMateriel: newMaterial.reference,
       designation: newMaterial.designation,
       famille: newMaterial.categorie,
       marque: "Non spécifié",
@@ -99,6 +146,8 @@ const MaterialTableManager = ({
     };
 
     onMaterialsChange([...materials, material]);
+    
+    // Reset du formulaire
     setNewMaterial({
       fournisseur: "",
       reference: "",
@@ -112,6 +161,7 @@ const MaterialTableManager = ({
 
   const handleAddComponent = (materialId: string) => {
     if (!newComponent.designation || !newComponent.familleComposant) {
+      alert("Veuillez remplir tous les champs obligatoires");
       return;
     }
 
@@ -210,8 +260,20 @@ const MaterialTableManager = ({
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <Label>Fournisseur</Label>
-                        <Select value={newMaterial.fournisseur} onValueChange={(value) => setNewMaterial(prev => ({ ...prev, fournisseur: value }))}>
+                        <Label>Fournisseur *</Label>
+                        <Select 
+                          value={newMaterial.fournisseur} 
+                          onValueChange={(value) => {
+                            setNewMaterial(prev => ({ 
+                              ...prev, 
+                              fournisseur: value, 
+                              categorie: "", 
+                              reference: "", 
+                              designation: "", 
+                              montantHT: 0 
+                            }));
+                          }}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Choisir un fournisseur" />
                           </SelectTrigger>
@@ -223,8 +285,20 @@ const MaterialTableManager = ({
                         </Select>
                       </div>
                       <div>
-                        <Label>Catégorie</Label>
-                        <Select value={newMaterial.categorie} onValueChange={(value) => setNewMaterial(prev => ({ ...prev, categorie: value }))}>
+                        <Label>Catégorie *</Label>
+                        <Select 
+                          value={newMaterial.categorie} 
+                          onValueChange={(value) => {
+                            setNewMaterial(prev => ({ 
+                              ...prev, 
+                              categorie: value, 
+                              reference: "", 
+                              designation: "", 
+                              montantHT: 0 
+                            }));
+                          }}
+                          disabled={!newMaterial.fournisseur}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Choisir une catégorie" />
                           </SelectTrigger>
@@ -236,22 +310,46 @@ const MaterialTableManager = ({
                         </Select>
                       </div>
                       <div>
-                        <Label>Référence</Label>
-                        <Input
-                          placeholder="Référence automatique"
-                          value={newMaterial.reference}
-                          onChange={(e) => setNewMaterial(prev => ({ ...prev, reference: e.target.value }))}
-                        />
+                        <Label>Référence *</Label>
+                        <Select 
+                          value={newMaterial.reference} 
+                          onValueChange={handleReferenceSelect}
+                          disabled={!newMaterial.fournisseur || !newMaterial.categorie}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choisir une référence" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getAvailableReferences().map(item => (
+                              <SelectItem key={item.ref} value={item.ref}>
+                                {item.ref} - {item.designation}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     
-                    <div>
-                      <Label>Désignation</Label>
-                      <Input
-                        placeholder="Désignation du matériel"
-                        value={newMaterial.designation}
-                        onChange={(e) => setNewMaterial(prev => ({ ...prev, designation: e.target.value }))}
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Désignation *</Label>
+                        <Input
+                          placeholder="Désignation automatique"
+                          value={newMaterial.designation}
+                          readOnly
+                          className="bg-gray-100"
+                        />
+                      </div>
+                      <div>
+                        <Label>Montant HT (FCFA) *</Label>
+                        <Input
+                          type="number"
+                          placeholder="Montant automatique"
+                          value={newMaterial.montantHT}
+                          readOnly
+                          className="bg-gray-100"
+                        />
+                      </div>
                     </div>
                     
                     <div className="flex gap-2">
@@ -282,182 +380,216 @@ const MaterialTableManager = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredMaterials.map((material) => (
-                      <>
-                        {/* Ligne principale du matériel */}
-                        <TableRow key={material.id} className="hover:bg-gray-50">
-                          <TableCell className="p-2">
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => toggleMaterialExpansion(material.id)}
-                                className="p-1"
-                              >
-                                {expandedMaterials.includes(material.id) ? 
-                                  <ChevronDown className="h-4 w-4" /> : 
-                                  <ChevronRight className="h-4 w-4" />
-                                }
-                              </Button>
-                              <Button variant="ghost" size="sm" className="p-1">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" className="p-1">
-                                <ToggleLeft className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{material.designation}</div>
-                              <div className="text-sm text-gray-500">{material.referenceMateriel}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>{material.fournisseur}</TableCell>
-                          <TableCell>{material.famille}</TableCell>
-                          <TableCell>{material.valeurInitialeHT?.toLocaleString()} FCFA</TableCell>
-                          <TableCell>
-                            <Badge variant="destructive" className="bg-red-100 text-red-800">
-                              INACTIVE
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-sm">{new Date(material.dateAcquisition).toLocaleDateString('fr-FR')}</TableCell>
-                          <TableCell className="text-sm">{new Date().toLocaleDateString('fr-FR')}</TableCell>
-                        </TableRow>
-                        
-                        {/* Section des composants (sous-tableau) */}
-                        {expandedMaterials.includes(material.id) && (
-                          <TableRow>
-                            <TableCell colSpan={8} className="p-0">
-                              <div className="border-l-4 border-orange-500 bg-orange-50">
-                                {/* En-tête des composants */}
-                                <div className="bg-orange-600 text-white p-3">
-                                  <div className="flex items-center justify-between">
-                                    <h4 className="font-semibold flex items-center gap-2">
-                                      <Package className="h-4 w-4" />
-                                      Composants
-                                    </h4>
-                                    <div className="flex items-center gap-2">
-                                      <Button 
-                                        size="sm" 
-                                        className="bg-orange-700 hover:bg-orange-800 text-white"
-                                        onClick={() => setShowComponentForm(material.id)}
-                                      >
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Add New Composant
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Formulaire d'ajout composant */}
-                                {showComponentForm === material.id && (
-                                  <div className="bg-white border-b p-4">
-                                    <div className="space-y-4">
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                          <Label>Désignation</Label>
-                                          <Input
-                                            placeholder="Désignation du composant"
-                                            value={newComponent.designation}
-                                            onChange={(e) => setNewComponent(prev => ({ ...prev, designation: e.target.value }))}
-                                          />
-                                        </div>
-                                        <div>
-                                          <Label>Famille Composant</Label>
-                                          <Select value={newComponent.familleComposant} onValueChange={(value) => setNewComponent(prev => ({ ...prev, familleComposant: value }))}>
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Choisir une famille" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="Moteur">Moteur</SelectItem>
-                                              <SelectItem value="Transmission">Transmission</SelectItem>
-                                              <SelectItem value="Électronique">Électronique</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                      </div>
-                                      <div className="flex gap-2">
-                                        <Button onClick={() => handleAddComponent(material.id)} className="bg-orange-600 hover:bg-orange-700">
-                                          Ajouter le composant
-                                        </Button>
-                                        <Button variant="outline" onClick={() => setShowComponentForm(null)}>
-                                          Annuler
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {/* Tableau des composants */}
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow className="bg-orange-100">
-                                      <TableHead className="w-16">Actions</TableHead>
-                                      <TableHead>Composant</TableHead>
-                                      <TableHead>Famille</TableHead>
-                                      <TableHead>Marque</TableHead>
-                                      <TableHead>Valeur HT</TableHead>
-                                      <TableHead>Statut</TableHead>
-                                      <TableHead>Date de création</TableHead>
-                                      <TableHead>Dernière mise à jour</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {material.composants && material.composants.length > 0 ? (
-                                      material.composants.map((component) => (
-                                        <TableRow key={component.id} className="bg-white hover:bg-orange-25">
-                                          <TableCell className="p-2">
-                                            <div className="flex items-center gap-1">
-                                              <Button variant="ghost" size="sm" className="p-1">
-                                                <Eye className="h-4 w-4" />
-                                              </Button>
-                                              <Button variant="ghost" size="sm" className="p-1">
-                                                <ToggleLeft className="h-4 w-4" />
-                                              </Button>
-                                            </div>
-                                          </TableCell>
-                                          <TableCell>
-                                            <div>
-                                              <div className="font-medium">{component.designation}</div>
-                                              <div className="text-sm text-gray-500">{component.numeroComposant}</div>
-                                            </div>
-                                          </TableCell>
-                                          <TableCell>{component.familleComposant}</TableCell>
-                                          <TableCell>{component.marque}</TableCell>
-                                          <TableCell>{component.valeurInitialeHT?.toLocaleString()} FCFA</TableCell>
-                                          <TableCell>
-                                            <Badge variant="destructive" className="bg-red-100 text-red-800">
-                                              INACTIVE
-                                            </Badge>
-                                          </TableCell>
-                                          <TableCell className="text-sm">{new Date(component.dateAcquisition).toLocaleDateString('fr-FR')}</TableCell>
-                                          <TableCell className="text-sm">{new Date().toLocaleDateString('fr-FR')}</TableCell>
-                                        </TableRow>
-                                      ))
-                                    ) : (
-                                      <TableRow>
-                                        <TableCell colSpan={8} className="text-center text-gray-500 py-4 bg-white">
-                                          Aucun composant ajouté
-                                        </TableCell>
-                                      </TableRow>
-                                    )}
-                                  </TableBody>
-                                </Table>
+                    {filteredMaterials.length > 0 ? (
+                      filteredMaterials.map((material) => (
+                        <>
+                          {/* Ligne principale du matériel */}
+                          <TableRow key={material.id} className="hover:bg-gray-50">
+                            <TableCell className="p-2">
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => toggleMaterialExpansion(material.id)}
+                                  className="p-1"
+                                >
+                                  {expandedMaterials.includes(material.id) ? 
+                                    <ChevronDown className="h-4 w-4" /> : 
+                                    <ChevronRight className="h-4 w-4" />
+                                  }
+                                </Button>
+                                <Button variant="ghost" size="sm" className="p-1">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="p-1">
+                                  <ToggleLeft className="h-4 w-4" />
+                                </Button>
                               </div>
                             </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">{material.designation}</div>
+                                <div className="text-sm text-gray-500">{material.referenceMateriel}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>{material.fournisseur}</TableCell>
+                            <TableCell>{material.famille}</TableCell>
+                            <TableCell>{material.valeurInitialeHT?.toLocaleString()} FCFA</TableCell>
+                            <TableCell>
+                              <Badge variant="destructive" className="bg-red-100 text-red-800">
+                                INACTIVE
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm">{new Date(material.dateAcquisition).toLocaleDateString('fr-FR')}</TableCell>
+                            <TableCell className="text-sm">{new Date().toLocaleDateString('fr-FR')}</TableCell>
                           </TableRow>
-                        )}
-                      </>
-                    ))}
+                          
+                          {/* Section des composants (sous-tableau) */}
+                          {expandedMaterials.includes(material.id) && (
+                            <TableRow>
+                              <TableCell colSpan={8} className="p-0">
+                                <div className="border-l-4 border-orange-500 bg-orange-50">
+                                  {/* En-tête des composants */}
+                                  <div className="bg-orange-600 text-white p-3">
+                                    <div className="flex items-center justify-between">
+                                      <h4 className="font-semibold flex items-center gap-2">
+                                        <Package className="h-4 w-4" />
+                                        Composants
+                                      </h4>
+                                      <div className="flex items-center gap-2">
+                                        <Button 
+                                          size="sm" 
+                                          className="bg-orange-700 hover:bg-orange-800 text-white"
+                                          onClick={() => setShowComponentForm(material.id)}
+                                        >
+                                          <Plus className="h-4 w-4 mr-2" />
+                                          Add New Composant
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Formulaire d'ajout composant */}
+                                  {showComponentForm === material.id && (
+                                    <div className="bg-white border-b p-4">
+                                      <div className="space-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          <div>
+                                            <Label>Désignation *</Label>
+                                            <Input
+                                              placeholder="Désignation du composant"
+                                              value={newComponent.designation}
+                                              onChange={(e) => setNewComponent(prev => ({ ...prev, designation: e.target.value }))}
+                                            />
+                                          </div>
+                                          <div>
+                                            <Label>Famille Composant *</Label>
+                                            <Select value={newComponent.familleComposant} onValueChange={(value) => setNewComponent(prev => ({ ...prev, familleComposant: value }))}>
+                                              <SelectTrigger>
+                                                <SelectValue placeholder="Choisir une famille" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="Moteur">Moteur</SelectItem>
+                                                <SelectItem value="Transmission">Transmission</SelectItem>
+                                                <SelectItem value="Électronique">Électronique</SelectItem>
+                                                <SelectItem value="Carrosserie">Carrosserie</SelectItem>
+                                                <SelectItem value="Accessoires">Accessoires</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          <div>
+                                            <Label>Marque</Label>
+                                            <Input
+                                              placeholder="Marque"
+                                              value={newComponent.marque}
+                                              onChange={(e) => setNewComponent(prev => ({ ...prev, marque: e.target.value }))}
+                                            />
+                                          </div>
+                                          <div>
+                                            <Label>Modèle</Label>
+                                            <Input
+                                              placeholder="Modèle"
+                                              value={newComponent.modele}
+                                              onChange={(e) => setNewComponent(prev => ({ ...prev, modele: e.target.value }))}
+                                            />
+                                          </div>
+                                        </div>
+
+                                        <div>
+                                          <Label>Valeur HT (FCFA)</Label>
+                                          <Input
+                                            type="number"
+                                            placeholder="Valeur HT"
+                                            value={newComponent.valeurHT}
+                                            onChange={(e) => setNewComponent(prev => ({ ...prev, valeurHT: parseFloat(e.target.value) || 0 }))}
+                                          />
+                                        </div>
+                                        
+                                        <div className="flex gap-2">
+                                          <Button onClick={() => handleAddComponent(material.id)} className="bg-orange-600 hover:bg-orange-700">
+                                            Ajouter le composant
+                                          </Button>
+                                          <Button variant="outline" onClick={() => setShowComponentForm(null)}>
+                                            Annuler
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Tableau des composants */}
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow className="bg-orange-100">
+                                        <TableHead className="w-16">Actions</TableHead>
+                                        <TableHead>Composant</TableHead>
+                                        <TableHead>Famille</TableHead>
+                                        <TableHead>Marque</TableHead>
+                                        <TableHead>Valeur HT</TableHead>
+                                        <TableHead>Statut</TableHead>
+                                        <TableHead>Date de création</TableHead>
+                                        <TableHead>Dernière mise à jour</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {material.composants && material.composants.length > 0 ? (
+                                        material.composants.map((component) => (
+                                          <TableRow key={component.id} className="bg-white hover:bg-orange-25">
+                                            <TableCell className="p-2">
+                                              <div className="flex items-center gap-1">
+                                                <Button variant="ghost" size="sm" className="p-1">
+                                                  <Eye className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="sm" className="p-1">
+                                                  <ToggleLeft className="h-4 w-4" />
+                                                </Button>
+                                              </div>
+                                            </TableCell>
+                                            <TableCell>
+                                              <div>
+                                                <div className="font-medium">{component.designation}</div>
+                                                <div className="text-sm text-gray-500">{component.numeroComposant}</div>
+                                              </div>
+                                            </TableCell>
+                                            <TableCell>{component.familleComposant}</TableCell>
+                                            <TableCell>{component.marque}</TableCell>
+                                            <TableCell>{component.valeurInitialeHT?.toLocaleString()} FCFA</TableCell>
+                                            <TableCell>
+                                              <Badge variant="destructive" className="bg-red-100 text-red-800">
+                                                INACTIVE
+                                              </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-sm">{new Date(component.dateAcquisition).toLocaleDateString('fr-FR')}</TableCell>
+                                            <TableCell className="text-sm">{new Date().toLocaleDateString('fr-FR')}</TableCell>
+                                          </TableRow>
+                                        ))
+                                      ) : (
+                                        <TableRow>
+                                          <TableCell colSpan={8} className="text-center text-gray-500 py-4 bg-white">
+                                            Aucun composant ajouté
+                                          </TableCell>
+                                        </TableRow>
+                                      )}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                          Aucun matériel ajouté. Cliquez sur "Add New Matériel" pour commencer.
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
-                
-                {filteredMaterials.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    Aucun matériel ajouté. Cliquez sur "Add New Matériel" pour commencer.
-                  </div>
-                )}
               </div>
             </TabsContent>
             
