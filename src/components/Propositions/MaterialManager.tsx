@@ -44,8 +44,23 @@ interface MaterialManagerProps {
   selectedCampagne?: Campagne | null;
 }
 
+// Type pour les matériels disponibles
+interface MaterielDisponible {
+  ref: string;
+  designation: string;
+  prix: number;
+  disponible: boolean;
+}
+
+// Type pour la structure des matériels par fournisseur
+type MaterielsParFournisseur = {
+  [fournisseur: string]: {
+    [categorie: string]: MaterielDisponible[];
+  };
+};
+
 // Données de démonstration des matériels par fournisseur et catégorie
-const MATERIELS_PAR_FOURNISSEUR = {
+const MATERIELS_PAR_FOURNISSEUR: MaterielsParFournisseur = {
   "babacar-fils": {
     "Véhicules utilitaires": [
       { ref: "VU-001", designation: "Camionnette Ford Transit", prix: 15000000, disponible: true },
@@ -115,10 +130,10 @@ const MaterialManager = ({
   };
 
   const handleAddSelectedMaterials = () => {
-    const fournisseurData = MATERIELS_PAR_FOURNISSEUR[selectedFournisseur as keyof typeof MATERIELS_PAR_FOURNISSEUR];
-    const categorieData = fournisseurData?.[selectedCategorie as keyof typeof fournisseurData];
+    const fournisseurData = MATERIELS_PAR_FOURNISSEUR[selectedFournisseur];
+    const categorieData = fournisseurData?.[selectedCategorie];
     
-    if (categorieData) {
+    if (categorieData && Array.isArray(categorieData)) {
       const newMaterials = selectedMaterials.map(ref => {
         const materielData = categorieData.find(m => m.ref === ref);
         if (materielData) {
@@ -146,7 +161,7 @@ const MaterialManager = ({
           };
         }
         return null;
-      }).filter(Boolean) as MaterialData[];
+      }).filter((material): material is MaterialData => material !== null);
       
       onMaterialsChange([...materials, ...newMaterials]);
       setSelectedMaterials([]);
@@ -171,16 +186,16 @@ const MaterialManager = ({
     // Logique d'upload à implémenter
   };
 
-  const getAvailableCategories = () => {
+  const getAvailableCategories = (): string[] => {
     if (!selectedFournisseur) return [];
-    const fournisseurData = MATERIELS_PAR_FOURNISSEUR[selectedFournisseur as keyof typeof MATERIELS_PAR_FOURNISSEUR];
+    const fournisseurData = MATERIELS_PAR_FOURNISSEUR[selectedFournisseur];
     return fournisseurData ? Object.keys(fournisseurData) : [];
   };
 
-  const getAvailableMaterials = () => {
+  const getAvailableMaterials = (): MaterielDisponible[] => {
     if (!selectedFournisseur || !selectedCategorie) return [];
-    const fournisseurData = MATERIELS_PAR_FOURNISSEUR[selectedFournisseur as keyof typeof MATERIELS_PAR_FOURNISSEUR];
-    const categorieData = fournisseurData?.[selectedCategorie as keyof typeof fournisseurData];
+    const fournisseurData = MATERIELS_PAR_FOURNISSEUR[selectedFournisseur];
+    const categorieData = fournisseurData?.[selectedCategorie];
     return categorieData || [];
   };
 
