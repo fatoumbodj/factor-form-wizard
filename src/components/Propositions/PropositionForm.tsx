@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TypeProposition, Convention, Campagne, BaremeComplet } from "@/types/leasing";
@@ -8,7 +7,6 @@ import LeasingTypeSelectorEnhanced from "./LeasingTypeSelectorEnhanced";
 import ConventionSelector from "./ConventionSelector";
 import CampagneSelector from "./CampagneSelector";
 import LeasingTypeSection from "./LeasingTypeSection";
-import MaterialManager from "./MaterialManager";
 import PrestationsManager from "./PrestationsManager";
 import AmortizationTable from "./AmortizationTable";
 import ClientInfoSection from "./ClientInfoSection";
@@ -23,6 +21,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import MaterialTableManager from "./MaterialTableManager";
 
 interface ClientInfo {
   type: "client" | "prospect";
@@ -313,15 +312,9 @@ const PropositionForm = () => {
               </TabsContent>
               
               <TabsContent value="materials">
-                <MaterialManager
+                <MaterialTableManager
                   materials={selectedMaterials}
                   onMaterialsChange={setSelectedMaterials}
-                  selectedFournisseurs={selectedFournisseurs}
-                  onFournisseursChange={setSelectedFournisseurs}
-                  availableFournisseurs={AVAILABLE_FOURNISSEURS}
-                  typeProposition={typeProposition}
-                  selectedConvention={selectedConvention}
-                  selectedCampagne={selectedCampagne}
                 />
               </TabsContent>
               
