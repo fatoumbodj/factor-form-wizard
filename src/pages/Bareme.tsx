@@ -49,6 +49,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 
+// Updated demo data with new status options
 const BAREMES_DEMO: BaremeComplet[] = [
   {
     id: "bar-std-001",
@@ -61,7 +62,8 @@ const BAREMES_DEMO: BaremeComplet[] = [
     dateCreation: new Date("2024-01-01"),
     dateApplication: new Date("2024-01-15"),
     dateFin: new Date("2024-12-31"),
-    actif: true
+    actif: true,
+    statut: "active"
   },
   {
     id: "bar-der-001",
@@ -74,7 +76,8 @@ const BAREMES_DEMO: BaremeComplet[] = [
     dateCreation: new Date("2024-02-15"),
     dateApplication: new Date("2024-03-01"),
     dateFin: new Date("2024-12-31"),
-    actif: true
+    actif: true,
+    statut: "en_attente_validation"
   },
   {
     id: "bar-std-002",
@@ -87,13 +90,28 @@ const BAREMES_DEMO: BaremeComplet[] = [
     dateCreation: new Date("2024-03-01"),
     dateApplication: new Date("2024-03-15"),
     dateFin: new Date("2024-12-31"),
-    actif: false
+    actif: false,
+    statut: "cloturee"
+  },
+  {
+    id: "bar-der-002",
+    nom: "Barème Exceptionnel",
+    type: "derogatoire",
+    taux: 5.8,
+    marge: 2.0,
+    valeurResiduelle: 1.5,
+    typologie: "Crédit-Bail",
+    dateCreation: new Date("2024-04-01"),
+    dateApplication: new Date("2024-04-15"),
+    dateFin: new Date("2024-12-31"),
+    actif: false,
+    statut: "rejetee"
   }
 ];
 
 const Bareme = () => {
   const [baremes, setBaremes] = useState<BaremeComplet[]>(BAREMES_DEMO);
-  const [currentTab, setCurrentTab] = useState("standard");
+  const [currentTab, setCurrentTab] = useState("active");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingBareme, setEditingBareme] = useState<BaremeComplet | null>(null);
   const [tauxRange, setTauxRange] = useState<number[]>([6, 8]);
@@ -191,7 +209,8 @@ const Bareme = () => {
       dateApplication: formData.dateApplication ? new Date(formData.dateApplication) : undefined,
       dateFin: formData.dateFin ? new Date(formData.dateFin) : undefined,
       dateModification: editingBareme ? new Date() : undefined,
-      actif: formData.actif
+      actif: formData.actif,
+      statut: formData.actif ? "active" : "cloturee"
     };
 
     if (editingBareme) {
@@ -209,7 +228,6 @@ const Bareme = () => {
   };
 
   const handleSearchClient = () => {
-    // Simulation de recherche client
     if (formData.codeClient) {
       const mockClientInfo = {
         nom: "Dupont",
@@ -222,21 +240,50 @@ const Bareme = () => {
     }
   };
 
+  // Updated filtering function
   const getFilteredBaremes = () => {
     switch (currentTab) {
-      case "standard":
-        return baremes.filter(b => b.type === "standard");
-      case "derogatoire":
-        return baremes.filter(b => b.type === "derogatoire");
-      case "inactif":
-        return baremes.filter(b => !b.actif);
+      case "active":
+        return baremes.filter(b => b.statut === "active");
+      case "cloturee":
+        return baremes.filter(b => b.statut === "cloturee");
+      case "en_attente_validation":
+        return baremes.filter(b => b.statut === "en_attente_validation");
+      case "rejetee":
+        return baremes.filter(b => b.statut === "rejetee");
       default:
         return baremes;
     }
   };
 
-  const getStatutColor = (actif: boolean) => {
-    return actif ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800";
+  const getStatutColor = (statut: string) => {
+    switch (statut) {
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "cloturee":
+        return "bg-gray-100 text-gray-800";
+      case "en_attente_validation":
+        return "bg-yellow-100 text-yellow-800";
+      case "rejetee":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-blue-100 text-blue-800";
+    }
+  };
+
+  const getStatutLabel = (statut: string) => {
+    switch (statut) {
+      case "active":
+        return "Actif";
+      case "cloturee":
+        return "Clôturé";
+      case "en_attente_validation":
+        return "En attente de validation";
+      case "rejetee":
+        return "Rejeté";
+      default:
+        return statut;
+    }
   };
 
   return (
@@ -557,7 +604,6 @@ const Bareme = () => {
                       </div>
                     )}
 
-                    {/* Aperçu */}
                     <Card>
                       <CardHeader>
                         <CardTitle>Aperçu du Barème</CardTitle>
@@ -607,19 +653,21 @@ const Bareme = () => {
 
             <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
               <TabsList>
-                <TabsTrigger value="standard">Barèmes Standard</TabsTrigger>
-                <TabsTrigger value="derogatoire">Dérogatoires</TabsTrigger>
-                <TabsTrigger value="inactif">Inactifs</TabsTrigger>
+                <TabsTrigger value="active">Actifs</TabsTrigger>
+                <TabsTrigger value="cloturee">Clôturés</TabsTrigger>
+                <TabsTrigger value="en_attente_validation">En attente de validation</TabsTrigger>
+                <TabsTrigger value="rejetee">Rejetés</TabsTrigger>
               </TabsList>
 
-              {["standard", "derogatoire", "inactif"].map(tab => (
+              {["active", "cloturee", "en_attente_validation", "rejetee"].map(tab => (
                 <TabsContent key={tab} value={tab}>
                   <Card>
                     <CardHeader>
                       <CardTitle>
-                        {tab === "standard" && "Barèmes standards"}
-                        {tab === "derogatoire" && "Barèmes dérogatoires"}
-                        {tab === "inactif" && "Barèmes inactifs"}
+                        {tab === "active" && "Barèmes actifs"}
+                        {tab === "cloturee" && "Barèmes clôturés"}
+                        {tab === "en_attente_validation" && "Barèmes en attente de validation"}
+                        {tab === "rejetee" && "Barèmes rejetés"}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -679,8 +727,8 @@ const Bareme = () => {
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <Badge className={getStatutColor(bareme.actif)}>
-                                  {bareme.actif ? "Actif" : "Inactif"}
+                                <Badge className={getStatutColor(bareme.statut || "active")}>
+                                  {getStatutLabel(bareme.statut || "active")}
                                 </Badge>
                               </TableCell>
                               <TableCell>
