@@ -29,6 +29,7 @@ import {
 
 import FournisseurSelector from "@/components/Materiel/FournisseurSelector";
 import ImportMaterielSection from "@/components/Materiel/ImportMaterielSection";
+import FileUploadSection from "@/components/Propositions/FileUploadSection";
 import MaterielFormModal from "@/components/Materiel/MaterielFormModal";
 import ComponentFormModal from "@/components/Materiel/ComponentFormModal";
 
@@ -167,6 +168,10 @@ const Materiel = () => {
 
   const handleImportMateriels = (importedMateriels: any[]) => {
     console.log("Importing materials:", importedMateriels);
+  };
+
+  const handleImportComposants = (importedComposants: any[]) => {
+    console.log("Importing components:", importedComposants);
   };
 
   const handleAddComponent = () => {
@@ -380,18 +385,43 @@ const Materiel = () => {
                 </TabsContent>
 
                 <TabsContent value="composants" className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        Composants ajoutés ({composants.length})
-                        <Button onClick={handleAddComponent} className="bg-green-600 hover:bg-green-700">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Ajouter un composant
-                        </Button>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {composants.length > 0 ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <FileUploadSection
+                      title="Importer des composants"
+                      onFileUpload={handleImportComposants}
+                      acceptedFormats="csv,xlsx,xls"
+                      maxSize={5}
+                    />
+                    
+                    <Card className="border-dashed border-2 border-gray-300">
+                      <CardContent className="p-6">
+                        <div className="text-center">
+                          <div className="flex items-center gap-2 mb-2 justify-center">
+                            <Plus className="h-5 w-5 text-green-600" />
+                            <h3 className="font-medium text-gray-900">Saisie manuelle</h3>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-4">Ajouter des composants individuellement</p>
+                          <Button onClick={handleAddComponent} className="bg-green-600 hover:bg-green-700">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Ajouter un composant
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {composants.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center justify-between">
+                          Composants ajoutés ({composants.length})
+                          <Button onClick={handleAddComponent} className="bg-green-600 hover:bg-green-700">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Ajouter un composant
+                          </Button>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -486,23 +516,27 @@ const Materiel = () => {
                             ))}
                           </TableBody>
                         </Table>
-                      ) : (
-                        <div className="p-12 text-center">
-                          <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">
-                            Aucun composant ajouté
-                          </h3>
-                          <p className="text-gray-600 mb-4">
-                            Commencez par ajouter des composants à vos matériels
-                          </p>
-                          <Button onClick={handleAddComponent} className="bg-green-600 hover:bg-green-700">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Ajouter un composant
-                          </Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {composants.length === 0 && (
+                    <div className="p-12 text-center">
+                      <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        Aucun composant ajouté
+                      </h3>
+                      <p className="text-gray-600 mb-4">
+                        Commencez par ajouter des composants via upload de fichier ou saisie manuelle
+                      </p>
+                      <div className="flex gap-2 justify-center">
+                        <Button onClick={handleAddComponent} className="bg-green-600 hover:bg-green-700">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Saisie manuelle
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>
