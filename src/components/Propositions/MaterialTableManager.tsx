@@ -77,7 +77,8 @@ const MaterialTableManager = ({
     designation: "",
     categorie: "",
     montantHT: 0,
-    tva: 18
+    tva: 18,
+    taxeSupp: 0
   });
   const [newComponent, setNewComponent] = useState({
     designation: "",
@@ -154,7 +155,8 @@ const MaterialTableManager = ({
       designation: "",
       categorie: "",
       montantHT: 0,
-      tva: 18
+      tva: 18,
+      taxeSupp: 0
     });
     setShowAddForm(false);
   };
@@ -212,7 +214,7 @@ const MaterialTableManager = ({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="bg-purple-600 text-white">
+        <CardHeader className="bg-blue-600 text-white">
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
             Matériel
@@ -220,18 +222,18 @@ const MaterialTableManager = ({
         </CardHeader>
         <CardContent className="p-0">
           <Tabs defaultValue="tout" className="w-full">
-            <div className="border-b bg-purple-50">
+            <div className="border-b bg-blue-50">
               <div className="flex items-center justify-between p-4">
                 <TabsList className="bg-white">
-                  <TabsTrigger value="tout" className="text-purple-600">Tout</TabsTrigger>
-                  <TabsTrigger value="active" className="text-purple-600">Active</TabsTrigger>
-                  <TabsTrigger value="inactive" className="text-purple-600">Inactive</TabsTrigger>
+                  <TabsTrigger value="tout" className="text-blue-600">Tout</TabsTrigger>
+                  <TabsTrigger value="active" className="text-blue-600">Active</TabsTrigger>
+                  <TabsTrigger value="inactive" className="text-blue-600">Inactive</TabsTrigger>
                 </TabsList>
                 
                 <div className="flex items-center gap-2">
                   <Button 
                     onClick={() => setShowAddForm(!showAddForm)}
-                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add New Matériel
@@ -330,7 +332,7 @@ const MaterialTableManager = ({
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <Label>Désignation *</Label>
                         <Input
@@ -341,13 +343,22 @@ const MaterialTableManager = ({
                         />
                       </div>
                       <div>
-                        <Label>Montant HT (FCFA) *</Label>
+                        <Label>Montant HT (XAF) *</Label>
                         <Input
                           type="number"
                           placeholder="Montant automatique"
                           value={newMaterial.montantHT}
                           readOnly
                           className="bg-gray-100"
+                        />
+                      </div>
+                      <div>
+                        <Label>Taxe Supp. (%)</Label>
+                        <Input
+                          type="number"
+                          placeholder="Taxe supplémentaire"
+                          value={newMaterial.taxeSupp}
+                          onChange={(e) => setNewMaterial(prev => ({ ...prev, taxeSupp: parseFloat(e.target.value) || 0 }))}
                         />
                       </div>
                     </div>
@@ -368,12 +379,12 @@ const MaterialTableManager = ({
               <div className="border rounded-none">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-purple-50 border-b-2">
+                    <TableRow className="bg-blue-50 border-b-2">
                       <TableHead className="w-16">Actions</TableHead>
                       <TableHead className="font-semibold">Matériel</TableHead>
                       <TableHead className="font-semibold">Fournisseur</TableHead>
                       <TableHead className="font-semibold">Catégorie</TableHead>
-                      <TableHead className="font-semibold">Valeur HT</TableHead>
+                      <TableHead className="font-semibold">Montant HT (XAF)</TableHead>
                       <TableHead className="font-semibold">Statut</TableHead>
                       <TableHead className="font-semibold">Date de création</TableHead>
                       <TableHead className="font-semibold">Dernière mise à jour</TableHead>
@@ -414,7 +425,7 @@ const MaterialTableManager = ({
                             </TableCell>
                             <TableCell>{material.fournisseur}</TableCell>
                             <TableCell>{material.famille}</TableCell>
-                            <TableCell>{material.valeurInitialeHT?.toLocaleString()} FCFA</TableCell>
+                            <TableCell>{material.valeurInitialeHT?.toLocaleString()} XAF</TableCell>
                             <TableCell>
                               <Badge variant="destructive" className="bg-red-100 text-red-800">
                                 INACTIVE
@@ -428,9 +439,9 @@ const MaterialTableManager = ({
                           {expandedMaterials.includes(material.id) && (
                             <TableRow>
                               <TableCell colSpan={8} className="p-0">
-                                <div className="border-l-4 border-orange-500 bg-orange-50">
+                                <div className="border-l-4 border-blue-500 bg-blue-50">
                                   {/* En-tête des composants */}
-                                  <div className="bg-orange-600 text-white p-3">
+                                  <div className="bg-blue-600 text-white p-3">
                                     <div className="flex items-center justify-between">
                                       <h4 className="font-semibold flex items-center gap-2">
                                         <Package className="h-4 w-4" />
@@ -439,7 +450,7 @@ const MaterialTableManager = ({
                                       <div className="flex items-center gap-2">
                                         <Button 
                                           size="sm" 
-                                          className="bg-orange-700 hover:bg-orange-800 text-white"
+                                          className="bg-blue-700 hover:bg-blue-800 text-white"
                                           onClick={() => setShowComponentForm(material.id)}
                                         >
                                           <Plus className="h-4 w-4 mr-2" />
@@ -499,7 +510,7 @@ const MaterialTableManager = ({
                                         </div>
 
                                         <div>
-                                          <Label>Valeur HT (FCFA)</Label>
+                                          <Label>Valeur HT (XAF)</Label>
                                           <Input
                                             type="number"
                                             placeholder="Valeur HT"
@@ -509,7 +520,7 @@ const MaterialTableManager = ({
                                         </div>
                                         
                                         <div className="flex gap-2">
-                                          <Button onClick={() => handleAddComponent(material.id)} className="bg-orange-600 hover:bg-orange-700">
+                                          <Button onClick={() => handleAddComponent(material.id)} className="bg-blue-600 hover:bg-blue-700">
                                             Ajouter le composant
                                           </Button>
                                           <Button variant="outline" onClick={() => setShowComponentForm(null)}>
@@ -523,12 +534,12 @@ const MaterialTableManager = ({
                                   {/* Tableau des composants */}
                                   <Table>
                                     <TableHeader>
-                                      <TableRow className="bg-orange-100">
+                                      <TableRow className="bg-blue-100">
                                         <TableHead className="w-16">Actions</TableHead>
                                         <TableHead>Composant</TableHead>
                                         <TableHead>Famille</TableHead>
                                         <TableHead>Marque</TableHead>
-                                        <TableHead>Valeur HT</TableHead>
+                                        <TableHead>Valeur HT (XAF)</TableHead>
                                         <TableHead>Statut</TableHead>
                                         <TableHead>Date de création</TableHead>
                                         <TableHead>Dernière mise à jour</TableHead>
@@ -537,7 +548,7 @@ const MaterialTableManager = ({
                                     <TableBody>
                                       {material.composants && material.composants.length > 0 ? (
                                         material.composants.map((component) => (
-                                          <TableRow key={component.id} className="bg-white hover:bg-orange-25">
+                                          <TableRow key={component.id} className="bg-white hover:bg-blue-25">
                                             <TableCell className="p-2">
                                               <div className="flex items-center gap-1">
                                                 <Button variant="ghost" size="sm" className="p-1">
@@ -556,7 +567,7 @@ const MaterialTableManager = ({
                                             </TableCell>
                                             <TableCell>{component.familleComposant}</TableCell>
                                             <TableCell>{component.marque}</TableCell>
-                                            <TableCell>{component.valeurInitialeHT?.toLocaleString()} FCFA</TableCell>
+                                            <TableCell>{component.valeurInitialeHT?.toLocaleString()} XAF</TableCell>
                                             <TableCell>
                                               <Badge variant="destructive" className="bg-red-100 text-red-800">
                                                 INACTIVE
