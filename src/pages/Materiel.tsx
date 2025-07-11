@@ -174,6 +174,15 @@ const Materiel = () => {
     console.log("Importing components:", importedComposants);
   };
 
+  // New wrapper function to handle file upload for components
+  const handleComponentFileUpload = (file: File) => {
+    console.log("Processing component file:", file.name);
+    // TODO: Process the file (CSV/Excel) and extract component data
+    // For now, we'll simulate with empty array
+    const extractedComponents: any[] = [];
+    handleImportComposants(extractedComponents);
+  };
+
   const handleAddComponent = () => {
     setEditingComponent(null);
     setIsComponentModalOpen(true);
@@ -388,7 +397,7 @@ const Materiel = () => {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <FileUploadSection
                       title="Importer des composants"
-                      onFileUpload={handleImportComposants}
+                      onFileUpload={handleComponentFileUpload}
                       acceptedFormats="csv,xlsx,xls"
                       maxSize={5}
                     />
