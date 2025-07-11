@@ -85,7 +85,8 @@ const MaterialTableManager = ({
     familleComposant: "",
     marque: "",
     modele: "",
-    valeurHT: 0
+    valeurHT: 0,
+    taxeSupp: 0
   });
 
   const toggleMaterialExpansion = (materialId: string) => {
@@ -201,7 +202,8 @@ const MaterialTableManager = ({
       familleComposant: "",
       marque: "",
       modele: "",
-      valeurHT: 0
+      valeurHT: 0,
+      taxeSupp: 0
     });
     setShowComponentForm(null);
   };
@@ -226,8 +228,8 @@ const MaterialTableManager = ({
               <div className="flex items-center justify-between p-4">
                 <TabsList className="bg-white">
                   <TabsTrigger value="tout" className="text-blue-600">Tout</TabsTrigger>
-                  <TabsTrigger value="active" className="text-blue-600">Active</TabsTrigger>
-                  <TabsTrigger value="inactive" className="text-blue-600">Inactive</TabsTrigger>
+                  <TabsTrigger value="active" className="text-blue-600">Actif</TabsTrigger>
+                  <TabsTrigger value="inactive" className="text-blue-600">Inactif</TabsTrigger>
                 </TabsList>
                 
                 <div className="flex items-center gap-2">
@@ -236,7 +238,7 @@ const MaterialTableManager = ({
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Add New Matériel
+                    Ajouter Nouveau Matériel
                   </Button>
                   <Button variant="outline" className="border-gray-300">
                     <Download className="h-4 w-4 mr-2" />
@@ -245,7 +247,7 @@ const MaterialTableManager = ({
                   <div className="relative">
                     <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                     <Input
-                      placeholder="Search"
+                      placeholder="Rechercher"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 w-64"
@@ -385,9 +387,7 @@ const MaterialTableManager = ({
                       <TableHead className="font-semibold">Fournisseur</TableHead>
                       <TableHead className="font-semibold">Catégorie</TableHead>
                       <TableHead className="font-semibold">Montant HT (XAF)</TableHead>
-                      <TableHead className="font-semibold">Statut</TableHead>
-                      <TableHead className="font-semibold">Date de création</TableHead>
-                      <TableHead className="font-semibold">Dernière mise à jour</TableHead>
+                      <TableHead className="font-semibold">Taxe (%)</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -426,19 +426,13 @@ const MaterialTableManager = ({
                             <TableCell>{material.fournisseur}</TableCell>
                             <TableCell>{material.famille}</TableCell>
                             <TableCell>{material.valeurInitialeHT?.toLocaleString()} XAF</TableCell>
-                            <TableCell>
-                              <Badge variant="destructive" className="bg-red-100 text-red-800">
-                                INACTIVE
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-sm">{new Date(material.dateAcquisition).toLocaleDateString('fr-FR')}</TableCell>
-                            <TableCell className="text-sm">{new Date().toLocaleDateString('fr-FR')}</TableCell>
+                            <TableCell>18%</TableCell>
                           </TableRow>
                           
                           {/* Section des composants (sous-tableau) */}
                           {expandedMaterials.includes(material.id) && (
                             <TableRow>
-                              <TableCell colSpan={8} className="p-0">
+                              <TableCell colSpan={6} className="p-0">
                                 <div className="border-l-4 border-blue-500 bg-blue-50">
                                   {/* En-tête des composants */}
                                   <div className="bg-blue-600 text-white p-3">
@@ -454,7 +448,7 @@ const MaterialTableManager = ({
                                           onClick={() => setShowComponentForm(material.id)}
                                         >
                                           <Plus className="h-4 w-4 mr-2" />
-                                          Add New Composant
+                                          Ajouter Nouveau Composant
                                         </Button>
                                       </div>
                                     </div>
@@ -509,14 +503,25 @@ const MaterialTableManager = ({
                                           </div>
                                         </div>
 
-                                        <div>
-                                          <Label>Valeur HT (XAF)</Label>
-                                          <Input
-                                            type="number"
-                                            placeholder="Valeur HT"
-                                            value={newComponent.valeurHT}
-                                            onChange={(e) => setNewComponent(prev => ({ ...prev, valeurHT: parseFloat(e.target.value) || 0 }))}
-                                          />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          <div>
+                                            <Label>Montant HT (XAF)</Label>
+                                            <Input
+                                              type="number"
+                                              placeholder="Montant HT"
+                                              value={newComponent.valeurHT}
+                                              onChange={(e) => setNewComponent(prev => ({ ...prev, valeurHT: parseFloat(e.target.value) || 0 }))}
+                                            />
+                                          </div>
+                                          <div>
+                                            <Label>Taxe Supp. (%)</Label>
+                                            <Input
+                                              type="number"
+                                              placeholder="Taxe supplémentaire"
+                                              value={newComponent.taxeSupp}
+                                              onChange={(e) => setNewComponent(prev => ({ ...prev, taxeSupp: parseFloat(e.target.value) || 0 }))}
+                                            />
+                                          </div>
                                         </div>
                                         
                                         <div className="flex gap-2">
@@ -539,10 +544,8 @@ const MaterialTableManager = ({
                                         <TableHead>Composant</TableHead>
                                         <TableHead>Famille</TableHead>
                                         <TableHead>Marque</TableHead>
-                                        <TableHead>Valeur HT (XAF)</TableHead>
-                                        <TableHead>Statut</TableHead>
-                                        <TableHead>Date de création</TableHead>
-                                        <TableHead>Dernière mise à jour</TableHead>
+                                        <TableHead>Montant HT (XAF)</TableHead>
+                                        <TableHead>Taxe (%)</TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -568,18 +571,12 @@ const MaterialTableManager = ({
                                             <TableCell>{component.familleComposant}</TableCell>
                                             <TableCell>{component.marque}</TableCell>
                                             <TableCell>{component.valeurInitialeHT?.toLocaleString()} XAF</TableCell>
-                                            <TableCell>
-                                              <Badge variant="destructive" className="bg-red-100 text-red-800">
-                                                INACTIVE
-                                              </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-sm">{new Date(component.dateAcquisition).toLocaleDateString('fr-FR')}</TableCell>
-                                            <TableCell className="text-sm">{new Date().toLocaleDateString('fr-FR')}</TableCell>
+                                            <TableCell>18%</TableCell>
                                           </TableRow>
                                         ))
                                       ) : (
                                         <TableRow>
-                                          <TableCell colSpan={8} className="text-center text-gray-500 py-4 bg-white">
+                                          <TableCell colSpan={6} className="text-center text-gray-500 py-4 bg-white">
                                             Aucun composant ajouté
                                           </TableCell>
                                         </TableRow>
@@ -594,8 +591,8 @@ const MaterialTableManager = ({
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                          Aucun matériel ajouté. Cliquez sur "Add New Matériel" pour commencer.
+                        <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                          Aucun matériel ajouté. Cliquez sur "Ajouter Nouveau Matériel" pour commencer.
                         </TableCell>
                       </TableRow>
                     )}
