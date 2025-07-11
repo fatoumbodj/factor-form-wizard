@@ -49,6 +49,11 @@ const REFERENCES_DATA = {
     "Véhicules utilitaires": [
       { ref: "SA-VU-001", designation: "Toyota Hilux 2023", montantHT: 20000000 },
       { ref: "SA-VU-002", designation: "Ford Ranger 2023", montantHT: 22000000 }
+    ],
+    "Composants": [
+      { ref: "SA-CP-001", designation: "Moteur Toyota 2.0L", montantHT: 3000000 },
+      { ref: "SA-CP-002", designation: "Transmission automatique", montantHT: 2500000 },
+      { ref: "SA-CP-003", designation: "Système électronique", montantHT: 1500000 }
     ]
   },
   "babacar-fils": {
@@ -59,6 +64,11 @@ const REFERENCES_DATA = {
     "Matériels industriels": [
       { ref: "BF-MI-001", designation: "Groupe électrogène 100KVA", montantHT: 8000000 },
       { ref: "BF-MI-002", designation: "Compresseur industriel", montantHT: 5000000 }
+    ],
+    "Composants": [
+      { ref: "BF-CP-001", designation: "Moteur diesel 50CV", montantHT: 2800000 },
+      { ref: "BF-CP-002", designation: "Alternateur industriel", montantHT: 800000 },
+      { ref: "BF-CP-003", designation: "Système hydraulique", montantHT: 1200000 }
     ]
   }
 };
@@ -81,11 +91,12 @@ const MaterialTableManager = ({
     taxeSupp: 0
   });
   const [newComponent, setNewComponent] = useState({
+    fournisseur: "",
+    reference: "",
     designation: "",
-    familleComposant: "",
-    marque: "",
-    modele: "",
-    valeurHT: 0,
+    categorie: "",
+    montantHT: 0,
+    tva: 18,
     taxeSupp: 0
   });
 
@@ -98,18 +109,33 @@ const MaterialTableManager = ({
   };
 
   // Récupérer les références disponibles selon le fournisseur et la catégorie
-  const getAvailableReferences = () => {
-    if (!newMaterial.fournisseur || !newMaterial.categorie) return [];
-    return REFERENCES_DATA[newMaterial.fournisseur as keyof typeof REFERENCES_DATA]?.[newMaterial.categorie] || [];
+  const getAvailableReferences = (fournisseur: string, categorie: string) => {
+    if (!fournisseur || !categorie) return [];
+    return REFERENCES_DATA[fournisseur as keyof typeof REFERENCES_DATA]?.[categorie] || [];
   };
 
-  // Gérer la sélection d'une référence
+  // Gérer la sélection d'une référence pour matériel
   const handleReferenceSelect = (refValue: string) => {
-    const availableRefs = getAvailableReferences();
+    const availableRefs = getAvailableReferences(newMaterial.fournisseur, newMaterial.categorie);
     const selectedRef = availableRefs.find(item => item.ref === refValue);
     
     if (selectedRef) {
       setNewMaterial(prev => ({
+        ...prev,
+        reference: selectedRef.ref,
+        designation: selectedRef.designation,
+        montantHT: selectedRef.montantHT
+      }));
+    }
+  };
+
+  // Gérer la sélection d'une référence pour composant
+  const handleComponentReferenceSelect = (refValue: string) => {
+    const availableRefs = getAvailableReferences(newComponent.fournisseur, "Composants");
+    const selectedRef = availableRefs.find(item => item.ref === refValue);
+    
+    if (selectedRef) {
+      setNewComponent(prev => ({
         ...prev,
         reference: selectedRef.ref,
         designation: selectedRef.designation,
@@ -163,26 +189,26 @@ const MaterialTableManager = ({
   };
 
   const handleAddComponent = (materialId: string) => {
-    if (!newComponent.designation || !newComponent.familleComposant) {
+    if (!newComponent.fournisseur || !newComponent.designation || !newComponent.reference) {
       alert("Veuillez remplir tous les champs obligatoires");
       return;
     }
 
     const component: ComponentData = {
       id: Date.now().toString(),
-      numeroComposant: `COMP-${Date.now()}`,
+      numeroComposant: newComponent.reference,
       designation: newComponent.designation,
-      familleComposant: newComponent.familleComposant,
-      marque: newComponent.marque || "Non spécifié",
-      modele: newComponent.modele || "Non spécifié",
+      familleComposant: "Composants",
+      marque: "Non spécifié",
+      modele: "Non spécifié",
       anneeFabrication: new Date().getFullYear(),
       dateMiseEnService: new Date().toISOString().split('T')[0],
       dureeUtilisationEstimee: "",
       dureeUtilisationType: "heures",
-      fournisseur: "Non spécifié",
+      fournisseur: newComponent.fournisseur,
       dateAcquisition: new Date().toISOString().split('T')[0],
-      valeurInitialeHT: newComponent.valeurHT,
-      valeurInitialeTTC: newComponent.valeurHT * 1.18,
+      valeurInitialeHT: newComponent.montantHT,
+      valeurInitialeTTC: newComponent.montantHT * (1 + newComponent.tva / 100),
       materielParentId: materialId
     };
 
@@ -198,11 +224,12 @@ const MaterialTableManager = ({
 
     onMaterialsChange(updatedMaterials);
     setNewComponent({
+      fournisseur: "",
+      reference: "",
       designation: "",
-      familleComposant: "",
-      marque: "",
-      modele: "",
-      valeurHT: 0,
+      categorie: "",
+      montantHT: 0,
+      tva: 18,
       taxeSupp: 0
     });
     setShowComponentForm(null);
@@ -324,7 +351,7 @@ const MaterialTableManager = ({
                             <SelectValue placeholder="Choisir une référence" />
                           </SelectTrigger>
                           <SelectContent>
-                            {getAvailableReferences().map(item => (
+                            {getAvailableReferences(newMaterial.fournisseur, newMaterial.categorie).map(item => (
                               <SelectItem key={item.ref} value={item.ref}>
                                 {item.ref} - {item.designation}
                               </SelectItem>
@@ -458,59 +485,70 @@ const MaterialTableManager = ({
                                   {showComponentForm === material.id && (
                                     <div className="bg-white border-b p-4">
                                       <div className="space-y-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                           <div>
-                                            <Label>Désignation *</Label>
-                                            <Input
-                                              placeholder="Désignation du composant"
-                                              value={newComponent.designation}
-                                              onChange={(e) => setNewComponent(prev => ({ ...prev, designation: e.target.value }))}
-                                            />
-                                          </div>
-                                          <div>
-                                            <Label>Famille Composant *</Label>
-                                            <Select value={newComponent.familleComposant} onValueChange={(value) => setNewComponent(prev => ({ ...prev, familleComposant: value }))}>
+                                            <Label>Fournisseur *</Label>
+                                            <Select 
+                                              value={newComponent.fournisseur} 
+                                              onValueChange={(value) => {
+                                                setNewComponent(prev => ({ 
+                                                  ...prev, 
+                                                  fournisseur: value, 
+                                                  reference: "", 
+                                                  designation: "", 
+                                                  montantHT: 0 
+                                                }));
+                                              }}
+                                            >
                                               <SelectTrigger>
-                                                <SelectValue placeholder="Choisir une famille" />
+                                                <SelectValue placeholder="Choisir un fournisseur" />
                                               </SelectTrigger>
                                               <SelectContent>
-                                                <SelectItem value="Moteur">Moteur</SelectItem>
-                                                <SelectItem value="Transmission">Transmission</SelectItem>
-                                                <SelectItem value="Électronique">Électronique</SelectItem>
-                                                <SelectItem value="Carrosserie">Carrosserie</SelectItem>
-                                                <SelectItem value="Accessoires">Accessoires</SelectItem>
+                                                <SelectItem value="senegal-auto">Sénégal-Auto</SelectItem>
+                                                <SelectItem value="babacar-fils">Babacar & Fils</SelectItem>
+                                                <SelectItem value="sonacos">SONACOS</SelectItem>
                                               </SelectContent>
                                             </Select>
                                           </div>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                           <div>
-                                            <Label>Marque</Label>
-                                            <Input
-                                              placeholder="Marque"
-                                              value={newComponent.marque}
-                                              onChange={(e) => setNewComponent(prev => ({ ...prev, marque: e.target.value }))}
-                                            />
+                                            <Label>Référence *</Label>
+                                            <Select 
+                                              value={newComponent.reference} 
+                                              onValueChange={handleComponentReferenceSelect}
+                                              disabled={!newComponent.fournisseur}
+                                            >
+                                              <SelectTrigger>
+                                                <SelectValue placeholder="Choisir une référence" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {getAvailableReferences(newComponent.fournisseur, "Composants").map(item => (
+                                                  <SelectItem key={item.ref} value={item.ref}>
+                                                    {item.ref} - {item.designation}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
                                           </div>
                                           <div>
-                                            <Label>Modèle</Label>
+                                            <Label>Désignation *</Label>
                                             <Input
-                                              placeholder="Modèle"
-                                              value={newComponent.modele}
-                                              onChange={(e) => setNewComponent(prev => ({ ...prev, modele: e.target.value }))}
+                                              placeholder="Désignation automatique"
+                                              value={newComponent.designation}
+                                              readOnly
+                                              className="bg-gray-100"
                                             />
                                           </div>
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                           <div>
-                                            <Label>Montant HT (XAF)</Label>
+                                            <Label>Montant HT (XAF) *</Label>
                                             <Input
                                               type="number"
-                                              placeholder="Montant HT"
-                                              value={newComponent.valeurHT}
-                                              onChange={(e) => setNewComponent(prev => ({ ...prev, valeurHT: parseFloat(e.target.value) || 0 }))}
+                                              placeholder="Montant automatique"
+                                              value={newComponent.montantHT}
+                                              readOnly
+                                              className="bg-gray-100"
                                             />
                                           </div>
                                           <div>
@@ -542,8 +580,8 @@ const MaterialTableManager = ({
                                       <TableRow className="bg-blue-100">
                                         <TableHead className="w-16">Actions</TableHead>
                                         <TableHead>Composant</TableHead>
-                                        <TableHead>Famille</TableHead>
-                                        <TableHead>Marque</TableHead>
+                                        <TableHead>Fournisseur</TableHead>
+                                        <TableHead>Catégorie</TableHead>
                                         <TableHead>Montant HT (XAF)</TableHead>
                                         <TableHead>Taxe (%)</TableHead>
                                       </TableRow>
@@ -568,8 +606,8 @@ const MaterialTableManager = ({
                                                 <div className="text-sm text-gray-500">{component.numeroComposant}</div>
                                               </div>
                                             </TableCell>
-                                            <TableCell>{component.familleComposant}</TableCell>
-                                            <TableCell>{component.marque}</TableCell>
+                                            <TableCell>{component.fournisseur}</TableCell>
+                                            <TableCell>Composants</TableCell>
                                             <TableCell>{component.valeurInitialeHT?.toLocaleString()} XAF</TableCell>
                                             <TableCell>18%</TableCell>
                                           </TableRow>
