@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { 
   FolderOpen, 
   Plus, 
@@ -20,12 +21,19 @@ import {
   Eye
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import DossierCreditForm from "@/components/DossierCredit/DossierCreditForm";
+import DossierCreditDetails from "@/components/DossierCredit/DossierCreditDetails";
+import { useToast } from "@/hooks/use-toast";
 
 const DossierCredit = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [selectedDossier, setSelectedDossier] = useState(null);
+  const [showDetails, setShowDetails] = useState(false);
+  const { toast } = useToast();
 
   // Données d'exemple pour les dossiers de crédit
-  const dossiers = [
+  const [dossiers, setDossiers] = useState([
     {
       id: "DC001",
       client: "SARL Technologies Plus",
@@ -35,7 +43,9 @@ const DossierCredit = () => {
       dateCreation: "2024-01-15",
       echeance: "2024-02-15",
       documents: 8,
-      responsable: "Marie Dubois"
+      responsable: "Marie Dubois",
+      objet: "Équipement informatique",
+      duree: "36 mois"
     },
     {
       id: "DC002", 
@@ -46,7 +56,9 @@ const DossierCredit = () => {
       dateCreation: "2024-01-12",
       echeance: "2024-01-30",
       documents: 12,
-      responsable: "Jean Martin"
+      responsable: "Jean Martin",
+      objet: "Véhicule",
+      duree: "48 mois"
     },
     {
       id: "DC003",
@@ -57,9 +69,11 @@ const DossierCredit = () => {
       dateCreation: "2024-01-10",
       echeance: "2024-01-25",
       documents: 6,
-      responsable: "Sophie Laurent"
+      responsable: "Sophie Laurent",
+      objet: "Machines industrielles",
+      duree: "60 mois"
     }
-  ];
+  ]);
 
   const getStatutBadge = (statut: string) => {
     switch (statut) {
@@ -74,10 +88,32 @@ const DossierCredit = () => {
     }
   };
 
+  const handleAddDossier = (newDossier: any) => {
+    setDossiers([newDossier, ...dossiers]);
+    setShowForm(false);
+    toast({
+      title: "Dossier créé",
+      description: `Le dossier ${newDossier.id} a été créé avec succès.`,
+    });
+  };
+
+  const handleViewDossier = (dossier: any) => {
+    setSelectedDossier(dossier);
+    setShowDetails(true);
+  };
+
   const filteredDossiers = dossiers.filter(dossier =>
     dossier.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
     dossier.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const totalDossiers = dossiers.length;
+  const dossiersValidation = dossiers.filter(d => d.statut === "validation").length;
+  const dossiersApprouves = dossiers.filter(d => d.statut === "approuve").length;
+  const montantTotal = dossiers.reduce((sum, d) => {
+    const montant = parseFloat(d.montant.replace(/[^\d]/g, ''));
+    return sum + montant;
+  }, 0);
 
   return (
     <SidebarProvider>
@@ -95,7 +131,7 @@ const DossierCredit = () => {
                 </p>
               </div>
               
-              <Button className="flex items-center space-x-2">
+              <Button className="flex items-center space-x-2" onClick={() => setShowForm(true)}>
                 <Plus className="h-4 w-4" />
                 <span>Nouveau dossier</span>
               </Button>
@@ -126,8 +162,8 @@ const DossierCredit = () => {
                   <FolderOpen className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">156</div>
-                  <p className="text-xs text-muted-foreground">+12% ce mois</p>
+                  <div className="text-2xl font-bold">{totalDossiers}</div>
+                  <p className="text-xs text-muted-foreground">Tous statuts</p>
                 </CardContent>
               </Card>
 
@@ -137,7 +173,7 @@ const DossierCredit = () => {
                   <Clock className="h-4 w-4 text-orange-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">23</div>
+                  <div className="text-2xl font-bold">{dossiersValidation}</div>
                   <p className="text-xs text-muted-foreground">En attente</p>
                 </CardContent>
               </Card>
@@ -148,8 +184,8 @@ const DossierCredit = () => {
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">108</div>
-                  <p className="text-xs text-muted-foreground">69% du total</p>
+                  <div className="text-2xl font-bold">{dossiersApprouves}</div>
+                  <p className="text-xs text-muted-foreground">{Math.round((dossiersApprouves / totalDossiers) * 100)}% du total</p>
                 </CardContent>
               </Card>
 
@@ -159,7 +195,7 @@ const DossierCredit = () => {
                   <FileText className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">2.4M€</div>
+                  <div className="text-2xl font-bold">{(montantTotal / 1000000).toFixed(1)}M€</div>
                   <p className="text-xs text-muted-foreground">Dossiers actifs</p>
                 </CardContent>
               </Card>
@@ -207,7 +243,7 @@ const DossierCredit = () => {
                         
                         {getStatutBadge(dossier.statut)}
                         
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleViewDossier(dossier)}>
                           <Eye className="h-4 w-4" />
                         </Button>
                       </div>
@@ -219,6 +255,28 @@ const DossierCredit = () => {
           </main>
         </div>
       </div>
+
+      {/* Dialog pour le formulaire */}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DossierCreditForm 
+            onSubmit={handleAddDossier}
+            onCancel={() => setShowForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog pour les détails */}
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          {selectedDossier && (
+            <DossierCreditDetails 
+              dossier={selectedDossier}
+              onClose={() => setShowDetails(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 };
