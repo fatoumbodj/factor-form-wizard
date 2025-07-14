@@ -97,7 +97,8 @@ const BAREMES_DEMO: BaremeComplet[] = [
     valeurResiduelle: 2.5,
     typologie: "Crédit-Bail",
     dateCreation: new Date("2024-01-01"),
-    actif: true
+    actif: true,
+    statut: "active"
   },
   {
     id: "bar-der-001",
@@ -108,7 +109,8 @@ const BAREMES_DEMO: BaremeComplet[] = [
     valeurResiduelle: 2.0,
     typologie: "Crédit-Bail",
     dateCreation: new Date("2024-01-01"),
-    actif: true
+    actif: true,
+    statut: "active"
   }
 ];
 
@@ -203,7 +205,8 @@ const PropositionForm = () => {
           valeurResiduelle: selectedConvention.bareme.valeurResiduelle,
           typologie: "Crédit-Bail",
           dateCreation: new Date(),
-          actif: true
+          actif: true,
+          statut: "active"
         }
       ] : [];
     }
