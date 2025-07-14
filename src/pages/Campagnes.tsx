@@ -92,7 +92,8 @@ const BAREMES_EXISTANTS: BaremeComplet[] = [
     marge: 2.8,
     valeurResiduelle: 2.0,
     dateCreation: new Date(),
-    actif: true
+    actif: true,
+    statut: "active"
   }
 ];
 
