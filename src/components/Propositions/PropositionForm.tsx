@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TypeProposition, Convention, Campagne, BaremeComplet } from "@/types/leasing";
 import { MaterialData } from "@/types/material";
-import { Calculator, User, Package, FileText, Settings } from "lucide-react";
+import { Calculator, User, Package, FileText, Settings, Shield } from "lucide-react";
 import LeasingTypeSelectorEnhanced from "./LeasingTypeSelectorEnhanced";
 import ConventionSelector from "./ConventionSelector";
 import CampagneSelector from "./CampagneSelector";
@@ -10,6 +10,7 @@ import LeasingTypeSection from "./LeasingTypeSection";
 import PrestationsManager from "./PrestationsManager";
 import AmortizationTable from "./AmortizationTable";
 import ClientInfoSection from "./ClientInfoSection";
+import GarantiesSection from "./GarantiesSection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +57,17 @@ interface CalculationInfo {
   apport: number;
   frequencePaiement: "mensuel" | "trimestriel" | "annuel";
   bareme: string;
+}
+
+interface Garantie {
+  id: string;
+  natureGarantie: string;
+  designationGarantie: string;
+  typeGarantie: string;
+  montantGarantie: number;
+  pourcentageGarantie: number;
+  dateDebutGarantie: string;
+  dateFinGarantie: string;
 }
 
 // Demo data - clients existants
@@ -163,6 +175,7 @@ const PropositionForm = () => {
     bareme: ""
   });
   const [showAmortization, setShowAmortization] = useState(false);
+  const [garanties, setGaranties] = useState<Garantie[]>([]);
 
   const handleTypePropositionSelect = (type: TypeProposition | "classique") => {
     setTypeProposition(type);
@@ -256,7 +269,8 @@ const PropositionForm = () => {
                   { num: 3, label: "Matériel", icon: Package },
                   { num: 4, label: "Barèmes", icon: Calculator },
                   { num: 5, label: "Prestations", icon: FileText },
-                  { num: 6, label: "Amortissement", icon: Calculator }
+                  { num: 6, label: "Garanties", icon: Shield },
+                  { num: 7, label: "Amortissement", icon: Calculator }
                 ].map((step, index) => (
                   <div key={step.num} className="flex items-center">
                     <div className="flex items-center">
@@ -265,7 +279,7 @@ const PropositionForm = () => {
                       </div>
                       <span className="ml-2 text-sm font-medium text-gray-900">{step.label}</span>
                     </div>
-                    {index < 5 && <div className="w-8 h-px bg-gray-300 mx-4"></div>}
+                    {index < 6 && <div className="w-8 h-px bg-gray-300 mx-4"></div>}
                   </div>
                 ))}
               </div>
@@ -293,9 +307,13 @@ const PropositionForm = () => {
                   <FileText className="h-4 w-4 mr-2" />
                   5. Prestations
                 </TabsTrigger>
+                <TabsTrigger value="garanties">
+                  <Shield className="h-4 w-4 mr-2" />
+                  6. Garanties
+                </TabsTrigger>
                 <TabsTrigger value="amortissement">
                   <Calculator className="h-4 w-4 mr-2" />
-                  6. Amortissement
+                  7. Amortissement
                 </TabsTrigger>
               </TabsList>
               
@@ -393,6 +411,13 @@ const PropositionForm = () => {
                 <PrestationsManager
                   prestations={prestations}
                   onPrestationsChange={setPrestations}
+                />
+              </TabsContent>
+
+              <TabsContent value="garanties">
+                <GarantiesSection
+                  garanties={garanties}
+                  onGarantiesChange={setGaranties}
                 />
               </TabsContent>
               
