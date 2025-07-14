@@ -16,6 +16,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -758,4 +759,7 @@ export {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
 }
