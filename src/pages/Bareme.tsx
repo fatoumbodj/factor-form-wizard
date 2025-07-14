@@ -727,8 +727,8 @@ const Bareme = () => {
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <Badge className={getStatutColor(bareme.statut || "active")}>
-                                  {getStatutLabel(bareme.statut || "active")}
+                                <Badge className={getStatutColor(bareme.statut)}>
+                                  {getStatutLabel(bareme.statut)}
                                 </Badge>
                               </TableCell>
                               <TableCell>

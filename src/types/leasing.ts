@@ -72,6 +72,7 @@ export interface BaremeComplet {
   dateFin?: Date;
   dateModification?: Date;
   actif: boolean;
+  statut: "active" | "cloturee" | "en_attente_validation" | "rejetee";
 }
 
 export interface CategorieMatriel {
