@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BaremeComplet, Campagne, Convention } from "@/types/leasing";
-import { Calculator, Star, AlertTriangle } from "lucide-react";
+import { Calculator, Star, AlertTriangle, Trophy } from "lucide-react";
 import BaremeAlert from "./BaremeAlert";
 
 interface BaremeSelectorEnhancedProps {
@@ -112,12 +112,9 @@ const BaremeSelectorEnhanced = ({
     statut: "active" as const
   } : null;
 
-  // Barèmes dérogatoires triés : dossier unique en premier
-  const baremesDerogoires = clientBaremes.sort((a, b) => {
-    if (a.applicationUniqueDossier && !b.applicationUniqueDossier) return -1;
-    if (!a.applicationUniqueDossier && b.applicationUniqueDossier) return 1;
-    return 0;
-  });
+  // Séparer les barèmes client : dossier unique vs multi-dossiers
+  const baremesClientDossierUnique = clientBaremes.filter(b => b.applicationUniqueDossier);
+  const baremesClientMultiDossiers = clientBaremes.filter(b => !b.applicationUniqueDossier);
 
   const handleBaremeSelect = (bareme: BaremeComplet) => {
     // Si on sélectionne un barème de campagne/convention et que le client a un barème plus favorable
@@ -196,144 +193,204 @@ const BaremeSelectorEnhanced = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Barème de campagne par défaut */}
-          {baremeCampagne && (
-            <div>
-              <h4 className="font-semibold mb-3 flex items-center gap-2">
-                <Star className="h-4 w-4 text-yellow-500" />
-                Barème Campagne (Par défaut)
-              </h4>
-              <div
-                className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                  selectedBareme?.id === baremeCampagne.id
-                    ? "border-primary bg-primary/5 ring-2 ring-primary"
-                    : "border-border hover:border-primary/50"
-                }`}
-                onClick={() => handleBaremeSelect(baremeCampagne)}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h5 className="font-medium">{baremeCampagne.nom}</h5>
-                    <div className="flex gap-2 mt-2">
-                      <Badge variant="destructive" className="text-xs">
-                        Prioritaire
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        Taux: {baremeCampagne.taux}%
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        Marge: {baremeCampagne.marge}%
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        VR: {baremeCampagne.valeurResiduelle}%
-                      </Badge>
-                    </div>
-                  </div>
-                  {selectedBareme?.id === baremeCampagne.id && (
-                    <Badge variant="default" className="text-xs">
-                      Sélectionné
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Barème de convention */}
-          {baremeConvention && (
-            <div>
-              <h4 className="font-semibold mb-3 flex items-center gap-2">
-                <Star className="h-4 w-4 text-blue-500" />
-                Barème Convention
-              </h4>
-              <div
-                className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                  selectedBareme?.id === baremeConvention.id
-                    ? "border-primary bg-primary/5 ring-2 ring-primary"
-                    : "border-border hover:border-primary/50"
-                }`}
-                onClick={() => handleBaremeSelect(baremeConvention)}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h5 className="font-medium">{baremeConvention.nom}</h5>
-                    <div className="flex gap-2 mt-2">
-                      <Badge variant="secondary" className="text-xs">
-                        Convention
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        Taux: {baremeConvention.taux}%
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        Marge: {baremeConvention.marge}%
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        VR: {baremeConvention.valeurResiduelle}%
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Barèmes dérogatoires du client */}
-          {baremesDerogoires.length > 0 && (
-            <div>
-              <h4 className="font-semibold mb-3 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-orange-500" />
-                Barèmes Dérogatoires Client
-              </h4>
-              <div className="space-y-3">
-                {baremesDerogoires.map((bareme) => (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Colonne de gauche : Barème de campagne/convention */}
+            <div className="space-y-4">
+              {/* Barème de campagne par défaut */}
+              {baremeCampagne && (
+                <div>
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <Star className="h-4 w-4 text-yellow-500" />
+                    Barème Campagne
+                  </h4>
                   <div
-                    key={bareme.id}
                     className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                      selectedBareme?.id === bareme.id
+                      selectedBareme?.id === baremeCampagne.id
                         ? "border-primary bg-primary/5 ring-2 ring-primary"
                         : "border-border hover:border-primary/50"
                     }`}
-                    onClick={() => onBaremeSelect(bareme)}
+                    onClick={() => handleBaremeSelect(baremeCampagne)}
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <h5 className="font-medium">{bareme.nom}</h5>
-                        <div className="flex gap-2 mt-2">
-                          {bareme.applicationUniqueDossier && (
-                            <Badge variant="destructive" className="text-xs">
-                              Dossier Unique
-                            </Badge>
-                          )}
-                          <Badge variant="secondary" className="text-xs">
-                            Dérogatoire
+                        <h5 className="font-medium">{baremeCampagne.nom}</h5>
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          <Badge variant="destructive" className="text-xs">
+                            Campagne
                           </Badge>
                           <Badge variant="outline" className="text-xs">
-                            Taux: {bareme.taux}%
+                            Taux: {baremeCampagne.taux}%
                           </Badge>
                           <Badge variant="outline" className="text-xs">
-                            Marge: {bareme.marge}%
+                            Marge: {baremeCampagne.marge}%
                           </Badge>
                           <Badge variant="outline" className="text-xs">
-                            VR: {bareme.valeurResiduelle}%
+                            VR: {baremeCampagne.valeurResiduelle}%
                           </Badge>
                         </div>
-                        {bareme.applicationUniqueDossier && bareme.dossierUniqueId && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Dossier: {bareme.dossierUniqueId}
-                          </div>
-                        )}
                       </div>
-                      {selectedBareme?.id === bareme.id && (
+                      {selectedBareme?.id === baremeCampagne.id && (
                         <Badge variant="default" className="text-xs">
                           Sélectionné
                         </Badge>
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+
+              {/* Barème de convention */}
+              {baremeConvention && (
+                <div>
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <Star className="h-4 w-4 text-blue-500" />
+                    Barème Convention
+                  </h4>
+                  <div
+                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                      selectedBareme?.id === baremeConvention.id
+                        ? "border-primary bg-primary/5 ring-2 ring-primary"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                    onClick={() => handleBaremeSelect(baremeConvention)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h5 className="font-medium">{baremeConvention.nom}</h5>
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          <Badge variant="secondary" className="text-xs">
+                            Convention
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Taux: {baremeConvention.taux}%
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Marge: {baremeConvention.marge}%
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            VR: {baremeConvention.valeurResiduelle}%
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Colonne de droite : Barèmes dérogatoires client */}
+            <div className="space-y-4">
+              {/* Barèmes dérogatoires pour dossier unique */}
+              {baremesClientDossierUnique.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-green-500" />
+                    Barèmes Dossier Unique
+                  </h4>
+                  <div className="space-y-3">
+                    {baremesClientDossierUnique.map((bareme) => (
+                      <div
+                        key={bareme.id}
+                        className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                          selectedBareme?.id === bareme.id
+                            ? "border-primary bg-primary/5 ring-2 ring-primary"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                        onClick={() => onBaremeSelect(bareme)}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h5 className="font-medium">{bareme.nom}</h5>
+                            <div className="flex gap-2 mt-2 flex-wrap">
+                              <Badge variant="destructive" className="text-xs">
+                                Dossier Unique
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                Taux: {bareme.taux}%
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                Marge: {bareme.marge}%
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                VR: {bareme.valeurResiduelle}%
+                              </Badge>
+                            </div>
+                            {bareme.dossierUniqueId && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                Dossier: {bareme.dossierUniqueId}
+                              </div>
+                            )}
+                          </div>
+                          {selectedBareme?.id === bareme.id && (
+                            <Badge variant="default" className="text-xs">
+                              Sélectionné
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Barèmes dérogatoires multi-dossiers */}
+              {baremesClientMultiDossiers.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-orange-500" />
+                    Barèmes Dérogatoires Client
+                  </h4>
+                  <div className="space-y-3">
+                    {baremesClientMultiDossiers.map((bareme) => (
+                      <div
+                        key={bareme.id}
+                        className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                          selectedBareme?.id === bareme.id
+                            ? "border-primary bg-primary/5 ring-2 ring-primary"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                        onClick={() => onBaremeSelect(bareme)}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h5 className="font-medium">{bareme.nom}</h5>
+                            <div className="flex gap-2 mt-2 flex-wrap">
+                              <Badge variant="secondary" className="text-xs">
+                                Dérogatoire
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                Taux: {bareme.taux}%
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                Marge: {bareme.marge}%
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                VR: {bareme.valeurResiduelle}%
+                              </Badge>
+                            </div>
+                          </div>
+                          {selectedBareme?.id === bareme.id && (
+                            <Badge variant="default" className="text-xs">
+                              Sélectionné
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Message si pas de barèmes client */}
+              {clientBaremes.length === 0 && (
+                <div className="text-center p-8 text-muted-foreground">
+                  <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>Aucun barème dérogatoire disponible pour ce client</p>
+                </div>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
