@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TypeProposition, Convention, Campagne, BaremeComplet } from "@/types/leasing";
@@ -11,6 +12,7 @@ import PrestationsManager from "./PrestationsManager";
 import AmortizationTable from "./AmortizationTable";
 import ClientInfoSection from "./ClientInfoSection";
 import GarantiesSection from "./GarantiesSection";
+import BaremeSelectorEnhanced from "./BaremeSelectorEnhanced";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -161,6 +163,7 @@ const PropositionForm = () => {
   const [typeProposition, setTypeProposition] = useState<TypeProposition | "classique" | null>(null);
   const [selectedConvention, setSelectedConvention] = useState<Convention | null>(null);
   const [selectedCampagne, setSelectedCampagne] = useState<Campagne | null>(null);
+  const [selectedBareme, setSelectedBareme] = useState<BaremeComplet | null>(null);
   
   const [clientInfo, setClientInfo] = useState<ClientInfo>(defaultClientInfo);
   
@@ -181,6 +184,7 @@ const PropositionForm = () => {
     setTypeProposition(type);
     setSelectedConvention(null);
     setSelectedCampagne(null);
+    setSelectedBareme(null);
     
     if (type === "classique") {
       setCurrentStep(3);
@@ -191,12 +195,19 @@ const PropositionForm = () => {
 
   const handleConventionSelect = (convention: Convention) => {
     setSelectedConvention(convention);
+    setSelectedCampagne(null);
     setCurrentStep(3);
   };
 
   const handleCampagneSelect = (campagne: Campagne) => {
     setSelectedCampagne(campagne);
+    setSelectedConvention(null);
     setCurrentStep(3);
+  };
+
+  const handleBaremeSelect = (bareme: BaremeComplet) => {
+    setSelectedBareme(bareme);
+    setCalculationInfo(prev => ({ ...prev, bareme: bareme.id }));
   };
 
   const getAvailableBaremes = () => {
@@ -340,71 +351,66 @@ const PropositionForm = () => {
               </TabsContent>
               
               <TabsContent value="bareme">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Barème & Calculs</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="bareme">Barème à appliquer</Label>
-                      <Select value={calculationInfo.bareme} onValueChange={(value) => setCalculationInfo(prev => ({ ...prev, bareme: value }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner un barème" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAvailableBaremes().map(bareme => (
-                            <SelectItem key={bareme.id} value={bareme.id}>
-                              {bareme.nom} ({bareme.type})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="duree">Durée (mois)</Label>
-                        <Input 
-                          type="number" 
-                          id="duree" 
-                          value={calculationInfo.duree} 
-                          onChange={(e) => setCalculationInfo(prev => ({ ...prev, duree: parseInt(e.target.value) || 0 }))}
-                        />
+                <BaremeSelectorEnhanced
+                  selectedBareme={selectedBareme}
+                  onBaremeSelect={handleBaremeSelect}
+                  clientId={clientInfo.codeClient}
+                  campagne={selectedCampagne}
+                  convention={selectedConvention}
+                />
+                
+                {selectedBareme && (
+                  <Card className="mt-6">
+                    <CardHeader>
+                      <CardTitle>Paramètres de calcul</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="duree">Durée (mois)</Label>
+                          <Input 
+                            type="number" 
+                            id="duree" 
+                            value={calculationInfo.duree} 
+                            onChange={(e) => setCalculationInfo(prev => ({ ...prev, duree: parseInt(e.target.value) || 0 }))}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="apport">Apport (%)</Label>
+                          <Input 
+                            type="number" 
+                            id="apport" 
+                            value={calculationInfo.apport} 
+                            onChange={(e) => setCalculationInfo(prev => ({ ...prev, apport: parseInt(e.target.value) || 0 }))}
+                          />
+                        </div>
                       </div>
                       <div>
-                        <Label htmlFor="apport">Apport (%)</Label>
-                        <Input 
-                          type="number" 
-                          id="apport" 
-                          value={calculationInfo.apport} 
-                          onChange={(e) => setCalculationInfo(prev => ({ ...prev, apport: parseInt(e.target.value) || 0 }))}
-                        />
+                        <Label>Fréquence de Paiement</Label>
+                        <div className="flex gap-2 mt-2">
+                          <Button 
+                            variant={calculationInfo.frequencePaiement === "mensuel" ? "default" : "outline"}
+                            onClick={() => setCalculationInfo(prev => ({ ...prev, frequencePaiement: "mensuel" }))}
+                          >
+                            Mensuel
+                          </Button>
+                          <Button
+                            variant={calculationInfo.frequencePaiement === "trimestriel" ? "default" : "outline"}
+                            onClick={() => setCalculationInfo(prev => ({ ...prev, frequencePaiement: "trimestriel" }))}
+                          >
+                            Trimestriel
+                          </Button>
+                          <Button
+                            variant={calculationInfo.frequencePaiement === "annuel" ? "default" : "outline"}
+                            onClick={() => setCalculationInfo(prev => ({ ...prev, frequencePaiement: "annuel" }))}
+                          >
+                            Annuel
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <Label>Fréquence de Paiement</Label>
-                      <div className="flex gap-2 mt-2">
-                        <Button 
-                          variant={calculationInfo.frequencePaiement === "mensuel" ? "default" : "outline"}
-                          onClick={() => setCalculationInfo(prev => ({ ...prev, frequencePaiement: "mensuel" }))}
-                        >
-                          Mensuel
-                        </Button>
-                        <Button
-                          variant={calculationInfo.frequencePaiement === "trimestriel" ? "default" : "outline"}
-                          onClick={() => setCalculationInfo(prev => ({ ...prev, frequencePaiement: "trimestriel" }))}
-                        >
-                          Trimestriel
-                        </Button>
-                        <Button
-                          variant={calculationInfo.frequencePaiement === "annuel" ? "default" : "outline"}
-                          onClick={() => setCalculationInfo(prev => ({ ...prev, frequencePaiement: "annuel" }))}
-                        >
-                          Annuel
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
               
               <TabsContent value="prestations">
@@ -426,7 +432,7 @@ const PropositionForm = () => {
                   <AmortizationTable 
                     montant={selectedMaterials.reduce((sum, m) => sum + (m.valeurInitialeHT || 0), 0)}
                     duree={calculationInfo.duree}
-                    taux={7.5}
+                    taux={selectedBareme?.taux || 7.5}
                     onSaveDraft={() => console.log("Sauvegarder en brouillon")}
                     onSendForValidation={() => console.log("Envoyer pour validation")}
                     className="w-full"

@@ -11,6 +11,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit, Trash2, Calculator, FileText, Search, Calendar } from "lucide-react";
 import { BaremeComplet } from "@/types/leasing";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -56,6 +57,8 @@ const BAREMES_DEMO: BaremeComplet[] = [
     nom: "Barème Standard Véhicules",
     type: "standard",
     taux: 7.0,
+    variationPlus: 0.5,
+    variationMoins: 0.3,
     marge: 3.0,
     valeurResiduelle: 2.5,
     typologie: "Crédit-Bail",
@@ -70,6 +73,8 @@ const BAREMES_DEMO: BaremeComplet[] = [
     nom: "Barème Préférentiel Client VIP",
     type: "derogatoire",
     taux: 6.2,
+    variationPlus: 0.3,
+    variationMoins: 0.2,
     marge: 2.5,
     valeurResiduelle: 2.0,
     typologie: "LOA",
@@ -77,35 +82,27 @@ const BAREMES_DEMO: BaremeComplet[] = [
     dateApplication: new Date("2024-03-01"),
     dateFin: new Date("2024-12-31"),
     actif: true,
-    statut: "en_attente_validation"
-  },
-  {
-    id: "bar-std-002",
-    nom: "Barème Standard Équipement",
-    type: "standard",
-    taux: 7.5,
-    marge: 3.2,
-    valeurResiduelle: 2.8,
-    typologie: "LLD",
-    dateCreation: new Date("2024-03-01"),
-    dateApplication: new Date("2024-03-15"),
-    dateFin: new Date("2024-12-31"),
-    actif: false,
-    statut: "cloturee"
+    statut: "en_attente_validation",
+    applicationUniqueDossier: false,
+    clientId: "CLI001"
   },
   {
     id: "bar-der-002",
-    nom: "Barème Exceptionnel",
+    nom: "Barème Exceptionnel Dossier Unique",
     type: "derogatoire",
     taux: 5.8,
+    variationPlus: 0.2,
+    variationMoins: 0.1,
     marge: 2.0,
     valeurResiduelle: 1.5,
     typologie: "Crédit-Bail",
     dateCreation: new Date("2024-04-01"),
     dateApplication: new Date("2024-04-15"),
-    dateFin: new Date("2024-12-31"),
-    actif: false,
-    statut: "rejetee"
+    actif: true,
+    statut: "active",
+    applicationUniqueDossier: true,
+    clientId: "CLI002",
+    dossierUniqueId: "DOSS-2024-001"
   }
 ];
 
@@ -114,8 +111,6 @@ const Bareme = () => {
   const [currentTab, setCurrentTab] = useState("active");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingBareme, setEditingBareme] = useState<BaremeComplet | null>(null);
-  const [tauxRange, setTauxRange] = useState<number[]>([6, 8]);
-  const [dureeRange, setDureeRange] = useState<number[]>([12, 60]);
   const [tauxDefaut, setTauxDefaut] = useState(7.0);
   const [dureeDefaut, setDureeDefaut] = useState(36);
   const [formData, setFormData] = useState({
@@ -127,8 +122,9 @@ const Bareme = () => {
     marge: "",
     valeurResiduelle: "",
     valeurReprise: "",
-    premierLoyerMajore: "",
-    premierLoyerType: "sup",
+    variationPlus: "",
+    variationMoins: "",
+    applicationUniqueDossier: false,
     codeClient: "",
     clientInfo: null as any,
     dateCreation: new Date().toISOString().split('T')[0],
@@ -147,8 +143,9 @@ const Bareme = () => {
       marge: "",
       valeurResiduelle: "",
       valeurReprise: "",
-      premierLoyerMajore: "",
-      premierLoyerType: "sup",
+      variationPlus: "",
+      variationMoins: "",
+      applicationUniqueDossier: false,
       codeClient: "",
       clientInfo: null,
       dateCreation: new Date().toISOString().split('T')[0],
@@ -157,8 +154,6 @@ const Bareme = () => {
       actif: true
     });
     setEditingBareme(null);
-    setTauxRange([6, 8]);
-    setDureeRange([12, 60]);
     setTauxDefaut(7.0);
     setDureeDefaut(36);
   };
@@ -174,17 +169,16 @@ const Bareme = () => {
       marge: bareme.marge.toString(),
       valeurResiduelle: bareme.valeurResiduelle.toString(),
       valeurReprise: "",
-      premierLoyerMajore: "",
-      premierLoyerType: "sup",
-      codeClient: "",
+      variationPlus: bareme.variationPlus?.toString() || "",
+      variationMoins: bareme.variationMoins?.toString() || "",
+      applicationUniqueDossier: bareme.applicationUniqueDossier || false,
+      codeClient: bareme.clientId || "",
       clientInfo: null,
       dateCreation: bareme.dateCreation.toISOString().split('T')[0],
       dateApplication: bareme.dateApplication?.toISOString().split('T')[0] || "",
       dateFin: bareme.dateFin?.toISOString().split('T')[0] || "",
       actif: bareme.actif
     });
-    setTauxRange([bareme.tauxMin || 6, bareme.tauxMax || 8]);
-    setDureeRange([bareme.dureeMin || 12, bareme.dureeMax || 60]);
     setTauxDefaut(bareme.tauxDefaut || bareme.taux);
     setDureeDefaut(bareme.dureeDefaut || 36);
     setIsDialogOpen(true);
@@ -197,11 +191,9 @@ const Bareme = () => {
       type: formData.type,
       taux: tauxDefaut,
       tauxDefaut: tauxDefaut,
-      tauxMin: tauxRange[0],
-      tauxMax: tauxRange[1],
+      variationPlus: parseFloat(formData.variationPlus) || undefined,
+      variationMoins: parseFloat(formData.variationMoins) || undefined,
       dureeDefaut: dureeDefaut,
-      dureeMin: dureeRange[0],
-      dureeMax: dureeRange[1],
       marge: parseFloat(formData.marge),
       valeurResiduelle: parseFloat(formData.valeurResiduelle),
       typologie: formData.typologie,
@@ -210,7 +202,9 @@ const Bareme = () => {
       dateFin: formData.dateFin ? new Date(formData.dateFin) : undefined,
       dateModification: editingBareme ? new Date() : undefined,
       actif: formData.actif,
-      statut: formData.actif ? "active" : "cloturee"
+      statut: formData.actif ? "active" : "cloturee",
+      applicationUniqueDossier: formData.applicationUniqueDossier,
+      clientId: formData.codeClient || undefined
     };
 
     if (editingBareme) {
@@ -240,7 +234,6 @@ const Bareme = () => {
     }
   };
 
-  // Updated filtering function
   const getFilteredBaremes = () => {
     switch (currentTab) {
       case "active":
@@ -377,101 +370,49 @@ const Bareme = () => {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Configuration du Taux</Label>
-                        <div className="space-y-4 p-4 border rounded-lg">
-                          <div>
-                            <Label>Plage autorisée (Min: {tauxRange[0]}% - Max: {tauxRange[1]}%)</Label>
-                            <Slider
-                              value={tauxRange}
-                              onValueChange={setTauxRange}
-                              min={0}
-                              max={20}
-                              step={0.1}
-                              className="w-full mt-2"
-                            />
-                          </div>
-                          
+                    {/* Configuration du Taux avec variations */}
+                    <div>
+                      <Label>Configuration du Taux</Label>
+                      <div className="space-y-4 p-4 border rounded-lg">
+                        <div className="grid grid-cols-3 gap-4">
                           <div>
                             <Label htmlFor="tauxDefaut">Taux par défaut (%) *</Label>
                             <Input
                               id="tauxDefaut"
                               type="number"
                               step="0.1"
-                              min={tauxRange[0]}
-                              max={tauxRange[1]}
                               value={tauxDefaut}
                               onChange={(e) => setTauxDefaut(parseFloat(e.target.value) || 0)}
                               placeholder="7.0"
                             />
-                            <div className="mt-2">
-                              <Progress
-                                value={tauxDefaut}
-                                defaultValue={tauxDefaut}
-                                min={tauxRange[0]}
-                                max={tauxRange[1]}
-                                showDefaultIndicator={true}
-                                className="w-full"
-                              />
-                            </div>
                           </div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label>Configuration de la Durée</Label>
-                        <div className="space-y-4 p-4 border rounded-lg">
                           <div>
-                            <Label>Plage autorisée (Min: {dureeRange[0]} - Max: {dureeRange[1]} mois)</Label>
-                            <Slider
-                              value={dureeRange}
-                              onValueChange={setDureeRange}
-                              min={6}
-                              max={120}
-                              step={1}
-                              className="w-full mt-2"
-                            />
-                          </div>
-                          
-                          <div>
-                            <Label htmlFor="dureeDefaut">Durée par défaut (mois) *</Label>
+                            <Label htmlFor="variationPlus">Variation en plus (%)</Label>
                             <Input
-                              id="dureeDefaut"
+                              id="variationPlus"
                               type="number"
-                              min={dureeRange[0]}
-                              max={dureeRange[1]}
-                              value={dureeDefaut}
-                              onChange={(e) => setDureeDefaut(parseInt(e.target.value) || 0)}
-                              placeholder="36"
+                              step="0.1"
+                              value={formData.variationPlus}
+                              onChange={(e) => setFormData(prev => ({ ...prev, variationPlus: e.target.value }))}
+                              placeholder="0.5"
                             />
-                            <div className="mt-2">
-                              <Progress
-                                value={dureeDefaut}
-                                defaultValue={dureeDefaut}
-                                min={dureeRange[0]}
-                                max={dureeRange[1]}
-                                showDefaultIndicator={true}
-                                className="w-full"
-                              />
-                            </div>
+                          </div>
+                          <div>
+                            <Label htmlFor="variationMoins">Variation en moins (%)</Label>
+                            <Input
+                              id="variationMoins"
+                              type="number"
+                              step="0.1"
+                              value={formData.variationMoins}
+                              onChange={(e) => setFormData(prev => ({ ...prev, variationMoins: e.target.value }))}
+                              placeholder="0.3"
+                            />
                           </div>
                         </div>
+                        <div className="text-sm text-muted-foreground">
+                          Plage autorisée : {tauxDefaut - (parseFloat(formData.variationMoins) || 0)}% - {tauxDefaut + (parseFloat(formData.variationPlus) || 0)}%
+                        </div>
                       </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="typeEcheancier">Type échéancier</Label>
-                      <Select value={formData.typeEcheancier} onValueChange={(value) => setFormData(prev => ({ ...prev, typeEcheancier: value }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="constant">Constant</SelectItem>
-                          <SelectItem value="progressif">Progressif</SelectItem>
-                          <SelectItem value="degressif">Dégressif</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
 
                     <div className="grid grid-cols-3 gap-4">
@@ -500,6 +441,7 @@ const Bareme = () => {
                           type="date"
                           value={formData.dateFin}
                           onChange={(e) => setFormData(prev => ({ ...prev, dateFin: e.target.value }))}
+                          disabled={formData.applicationUniqueDossier}
                         />
                       </div>
                     </div>
@@ -536,6 +478,21 @@ const Bareme = () => {
 
                     {formData.type === "derogatoire" && (
                       <div className="space-y-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="applicationUnique"
+                            checked={formData.applicationUniqueDossier}
+                            onCheckedChange={(checked) => setFormData(prev => ({ 
+                              ...prev, 
+                              applicationUniqueDossier: !!checked,
+                              dateFin: checked ? "" : prev.dateFin
+                            }))}
+                          />
+                          <Label htmlFor="applicationUnique">
+                            Ce barème est à appliquer sur un seul dossier
+                          </Label>
+                        </div>
+
                         <div>
                           <Label htmlFor="codeClient">Code client</Label>
                           <div className="flex gap-2">
@@ -579,28 +536,6 @@ const Bareme = () => {
                             </CardContent>
                           </Card>
                         )}
-
-                        <div>
-                          <Label>1er loyer majoré</Label>
-                          <div className="grid grid-cols-2 gap-2">
-                            <Select value={formData.premierLoyerType} onValueChange={(value) => setFormData(prev => ({ ...prev, premierLoyerType: value }))}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="sup">Supérieur à</SelectItem>
-                                <SelectItem value="inf">Inférieur à</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={formData.premierLoyerMajore}
-                              onChange={(e) => setFormData(prev => ({ ...prev, premierLoyerMajore: e.target.value }))}
-                              placeholder="Valeur (%)"
-                            />
-                          </div>
-                        </div>
                       </div>
                     )}
 
@@ -615,6 +550,11 @@ const Bareme = () => {
                               {tauxDefaut}%
                             </div>
                             <div className="text-xs text-muted-foreground">Taux par défaut</div>
+                            {(formData.variationPlus || formData.variationMoins) && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                ({tauxDefaut - (parseFloat(formData.variationMoins) || 0)}% - {tauxDefaut + (parseFloat(formData.variationPlus) || 0)}%)
+                              </div>
+                            )}
                           </div>
                           <div className="text-center p-3 bg-green-50 rounded">
                             <div className="text-lg font-bold text-green-600">
@@ -688,12 +628,19 @@ const Bareme = () => {
                               <TableCell>
                                 <div>
                                   <div className="font-medium">{bareme.nom}</div>
-                                  <Badge 
-                                    variant={bareme.type === "standard" ? "default" : "secondary"}
-                                    className="text-xs mt-1"
-                                  >
-                                    {bareme.type}
-                                  </Badge>
+                                  <div className="flex gap-1 mt-1">
+                                    <Badge 
+                                      variant={bareme.type === "standard" ? "default" : "secondary"}
+                                      className="text-xs"
+                                    >
+                                      {bareme.type}
+                                    </Badge>
+                                    {bareme.applicationUniqueDossier && (
+                                      <Badge variant="destructive" className="text-xs">
+                                        Dossier Unique
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
                               </TableCell>
                               <TableCell>
@@ -704,6 +651,11 @@ const Bareme = () => {
                               <TableCell>
                                 <div className="text-sm">
                                   <div>Taux: {bareme.taux}%</div>
+                                  {(bareme.variationPlus || bareme.variationMoins) && (
+                                    <div className="text-xs text-muted-foreground">
+                                      Plage: {bareme.taux - (bareme.variationMoins || 0)}% - {bareme.taux + (bareme.variationPlus || 0)}%
+                                    </div>
+                                  )}
                                   <div>Marge: {bareme.marge}%</div>
                                   <div>VR: {bareme.valeurResiduelle}%</div>
                                 </div>

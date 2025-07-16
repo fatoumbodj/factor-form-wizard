@@ -60,12 +60,14 @@ export interface BaremeComplet {
   tauxDefaut?: number;
   tauxMin?: number;
   tauxMax?: number;
+  variationPlus?: number;
+  variationMoins?: number;
   dureeDefaut?: number;
   dureeMin?: number;
   dureeMax?: number;
   marge: number;
   valeurResiduelle: number;
-  typologie?: string; // "Crédit-Bail" | "LLD"
+  typologie?: string;
   conditions?: ConditionBareme[];
   dateCreation: Date;
   dateApplication?: Date;
@@ -73,6 +75,10 @@ export interface BaremeComplet {
   dateModification?: Date;
   actif: boolean;
   statut: "active" | "cloturee" | "en_attente_validation" | "rejetee";
+  // Nouvelles propriétés pour barèmes dérogatoires
+  applicationUniqueDossier?: boolean;
+  clientId?: string;
+  dossierUniqueId?: string;
 }
 
 export interface CategorieMatriel {
