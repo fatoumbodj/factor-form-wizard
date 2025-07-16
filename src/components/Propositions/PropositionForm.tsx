@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TypeProposition, Convention, Campagne, BaremeComplet } from "@/types/leasing";
@@ -196,12 +195,14 @@ const PropositionForm = () => {
   const handleConventionSelect = (convention: Convention) => {
     setSelectedConvention(convention);
     setSelectedCampagne(null);
+    setSelectedBareme(null);
     setCurrentStep(3);
   };
 
   const handleCampagneSelect = (campagne: Campagne) => {
     setSelectedCampagne(campagne);
     setSelectedConvention(null);
+    setSelectedBareme(null);
     setCurrentStep(3);
   };
 

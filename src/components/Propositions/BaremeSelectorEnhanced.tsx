@@ -39,9 +39,9 @@ const getClientBaremes = (clientId?: string): BaremeComplet[] => {
       id: "bar-client-002",
       nom: "Barème Exceptionnel Dossier Unique",
       type: "derogatoire",
-      taux: 4.8,
-      marge: 1.8,
-      valeurResiduelle: 1.0,
+      taux: 3.8,
+      marge: 1.5,
+      valeurResiduelle: 0.8,
       typologie: "Crédit-Bail",
       dateCreation: new Date("2024-03-01"),
       dateApplication: new Date("2024-03-15"),
@@ -50,6 +50,21 @@ const getClientBaremes = (clientId?: string): BaremeComplet[] => {
       clientId: clientId,
       applicationUniqueDossier: true,
       dossierUniqueId: "DOSS-2024-001"
+    },
+    {
+      id: "bar-client-003",
+      nom: "Barème Spécial Équipement Industriel",
+      type: "derogatoire",
+      taux: 4.5,
+      marge: 1.8,
+      valeurResiduelle: 1.2,
+      typologie: "Crédit-Bail",
+      dateCreation: new Date("2024-06-01"),
+      dateApplication: new Date("2024-06-15"),
+      actif: true,
+      statut: "active",
+      clientId: clientId,
+      applicationUniqueDossier: false
     }
   ];
 };
@@ -140,6 +155,28 @@ const BaremeSelectorEnhanced = ({
     setAlertData(null);
   };
 
+  // Auto-sélection du barème de campagne par défaut si c'est une campagne
+  React.useEffect(() => {
+    if (campagne && baremeCampagne && !selectedBareme) {
+      // Vérifier s'il y a un barème client plus favorable
+      if (clientBaremes.length > 0) {
+        const bestClientBareme = clientBaremes.reduce((best, current) => 
+          current.taux < best.taux ? current : best
+        );
+        
+        if (bestClientBareme.taux < baremeCampagne.taux) {
+          setAlertData({
+            baremeClient: bestClientBareme,
+            baremeCampagne: baremeCampagne
+          });
+          setShowAlert(true);
+          return;
+        }
+      }
+      onBaremeSelect(baremeCampagne);
+    }
+  }, [campagne, baremeCampagne, selectedBareme, clientBaremes, onBaremeSelect]);
+
   return (
     <div className="space-y-6">
       {showAlert && alertData && (
@@ -169,7 +206,7 @@ const BaremeSelectorEnhanced = ({
               <div
                 className={`p-4 border rounded-lg cursor-pointer transition-all ${
                   selectedBareme?.id === baremeCampagne.id
-                    ? "border-primary bg-primary/5"
+                    ? "border-primary bg-primary/5 ring-2 ring-primary"
                     : "border-border hover:border-primary/50"
                 }`}
                 onClick={() => handleBaremeSelect(baremeCampagne)}
@@ -192,6 +229,11 @@ const BaremeSelectorEnhanced = ({
                       </Badge>
                     </div>
                   </div>
+                  {selectedBareme?.id === baremeCampagne.id && (
+                    <Badge variant="default" className="text-xs">
+                      Sélectionné
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
@@ -207,7 +249,7 @@ const BaremeSelectorEnhanced = ({
               <div
                 className={`p-4 border rounded-lg cursor-pointer transition-all ${
                   selectedBareme?.id === baremeConvention.id
-                    ? "border-primary bg-primary/5"
+                    ? "border-primary bg-primary/5 ring-2 ring-primary"
                     : "border-border hover:border-primary/50"
                 }`}
                 onClick={() => handleBaremeSelect(baremeConvention)}
@@ -248,7 +290,7 @@ const BaremeSelectorEnhanced = ({
                     key={bareme.id}
                     className={`p-4 border rounded-lg cursor-pointer transition-all ${
                       selectedBareme?.id === bareme.id
-                        ? "border-primary bg-primary/5"
+                        ? "border-primary bg-primary/5 ring-2 ring-primary"
                         : "border-border hover:border-primary/50"
                     }`}
                     onClick={() => onBaremeSelect(bareme)}
@@ -281,6 +323,11 @@ const BaremeSelectorEnhanced = ({
                           </div>
                         )}
                       </div>
+                      {selectedBareme?.id === bareme.id && (
+                        <Badge variant="default" className="text-xs">
+                          Sélectionné
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 ))}

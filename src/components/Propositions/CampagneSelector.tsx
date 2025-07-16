@@ -11,7 +11,7 @@ interface CampagneSelectorProps {
   onCampagneSelect: (campagne: Campagne) => void;
 }
 
-// Données de démonstration pour les campagnes
+// Données de démonstration pour les campagnes avec des dates valides
 const CAMPAGNES_DISPONIBLES: Campagne[] = [
   {
     id: "camp-ete-2024",
@@ -24,8 +24,8 @@ const CAMPAGNES_DISPONIBLES: Campagne[] = [
       marge: 2.0,
       valeurResiduelle: 1.0
     },
-    dateDebut: new Date("2024-06-01"),
-    dateFin: new Date("2024-08-31"),
+    dateDebut: new Date("2024-07-01"),
+    dateFin: new Date("2025-08-31"),
     actif: true,
     prioritaire: true
   },
@@ -40,7 +40,7 @@ const CAMPAGNES_DISPONIBLES: Campagne[] = [
       valeurResiduelle: 1.5
     },
     dateDebut: new Date("2024-01-01"),
-    dateFin: new Date("2024-12-31"),
+    dateFin: new Date("2025-12-31"),
     actif: true,
     prioritaire: true
   },
@@ -55,8 +55,8 @@ const CAMPAGNES_DISPONIBLES: Campagne[] = [
       marge: 2.8,
       valeurResiduelle: 2.0
     },
-    dateDebut: new Date("2024-07-01"),
-    dateFin: new Date("2024-09-30"),
+    dateDebut: new Date("2024-11-01"),
+    dateFin: new Date("2025-09-30"),
     actif: true,
     prioritaire: true
   },
@@ -71,7 +71,38 @@ const CAMPAGNES_DISPONIBLES: Campagne[] = [
       valeurResiduelle: 0.5
     },
     dateDebut: new Date("2024-03-01"),
-    dateFin: new Date("2024-10-31"),
+    dateFin: new Date("2025-10-31"),
+    actif: true,
+    prioritaire: true
+  },
+  {
+    id: "camp-auto-noel-2024",
+    nom: "Spécial Auto Fin d'Année",
+    description: "Campagne exceptionnelle véhicules particuliers et utilitaires",
+    type: "fournisseur",
+    fournisseurs: ["senegal-auto", "dakar-motors"],
+    bareme: {
+      taux: 3.9,
+      marge: 1.5,
+      valeurResiduelle: 0.8
+    },
+    dateDebut: new Date("2024-12-01"),
+    dateFin: new Date("2025-02-28"),
+    actif: true,
+    prioritaire: true
+  },
+  {
+    id: "camp-pme-boost-2025",
+    nom: "PME Boost 2025",
+    description: "Soutien aux PME pour leur équipement professionnel",
+    type: "banque",
+    bareme: {
+      taux: 4.8,
+      marge: 2.0,
+      valeurResiduelle: 1.2
+    },
+    dateDebut: new Date("2024-11-15"),
+    dateFin: new Date("2025-06-30"),
     actif: true,
     prioritaire: true
   }
