@@ -59,6 +59,21 @@ const CAMPAGNES_DISPONIBLES: Campagne[] = [
     dateFin: new Date("2024-09-30"),
     actif: true,
     prioritaire: true
+  },
+  {
+    id: "camp-agriculture-2024",
+    nom: "Financement Agricole 2024",
+    description: "Campagne spéciale matériel agricole - Conditions exceptionnelles",
+    type: "banque",
+    bareme: {
+      taux: 4.2,
+      marge: 1.8,
+      valeurResiduelle: 0.5
+    },
+    dateDebut: new Date("2024-03-01"),
+    dateFin: new Date("2024-10-31"),
+    actif: true,
+    prioritaire: true
   }
 ];
 
@@ -70,8 +85,24 @@ const CampagneSelector = ({ selectedCampagne, onCampagneSelect }: CampagneSelect
            campagne.dateFin >= now;
   };
 
+  const validCampagnes = CAMPAGNES_DISPONIBLES.filter(camp => isValidCampagne(camp));
+
+  if (validCampagnes.length === 0) {
+    return (
+      <div className="text-center p-8">
+        <div className="mb-4">
+          <Zap className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+          <h3 className="text-lg font-semibold text-muted-foreground">Aucune campagne active</h3>
+          <p className="text-sm text-muted-foreground mt-2">
+            Il n'y a actuellement aucune campagne promotionnelle en cours.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold mb-2">Sélectionner une campagne</h3>
         <p className="text-sm text-muted-foreground">
@@ -80,11 +111,13 @@ const CampagneSelector = ({ selectedCampagne, onCampagneSelect }: CampagneSelect
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {CAMPAGNES_DISPONIBLES.filter(camp => isValidCampagne(camp)).map((campagne) => (
+        {validCampagnes.map((campagne) => (
           <Card 
             key={campagne.id}
-            className={`cursor-pointer transition-all hover:shadow-lg ${
-              selectedCampagne?.id === campagne.id ? "ring-2 ring-primary" : ""
+            className={`cursor-pointer transition-all hover:shadow-lg border-2 ${
+              selectedCampagne?.id === campagne.id 
+                ? "ring-2 ring-primary border-primary bg-primary/5" 
+                : "border-border hover:border-primary/50"
             }`}
             onClick={() => onCampagneSelect(campagne)}
           >
@@ -155,6 +188,18 @@ const CampagneSelector = ({ selectedCampagne, onCampagneSelect }: CampagneSelect
           </Card>
         ))}
       </div>
+
+      {selectedCampagne && (
+        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className="h-4 w-4 text-green-600" />
+            <span className="font-medium text-green-800">Campagne sélectionnée</span>
+          </div>
+          <p className="text-sm text-green-700">
+            <strong>{selectedCampagne.nom}</strong> - Taux exceptionnel : {selectedCampagne.bareme.taux}%
+          </p>
+        </div>
+      )}
     </div>
   );
 };
