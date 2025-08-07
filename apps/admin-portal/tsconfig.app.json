@@ -15,7 +15,10 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "noImplicitAny": true,
-    "strict": true
+    "strict": true,
+    "emitDeclarationOnly": false,
+    "declaration": true,
+    "noEmit": false
   },
   "exclude": [
     "out-tsc",

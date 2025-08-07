@@ -6,10 +6,15 @@
     "outDir": "dist",
     "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo",
     "emitDeclarationOnly": false,
+    "declaration": true,
+    "noEmit": false,
     "forceConsistentCasingInFileNames": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "../shared/infrastructure/src/lib/api/http-param.type.ts"],
+  "include": [
+    "src/**/*.ts",
+    "../shared/infrastructure/src/lib/api/http-param.type.ts"
+  ],
   "references": [],
   "exclude": [
     "vite.config.ts",
