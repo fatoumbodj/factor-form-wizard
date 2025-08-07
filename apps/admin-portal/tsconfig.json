@@ -1,0 +1,25 @@
+{
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "../../packages/infrastructure"
+    },
+    {
+      "path": "../../packages/domain"
+    },
+    {
+      "path": "../../packages/shared/app-shell"
+    },
+    {
+      "path": "../../packages/shared/ui"
+    },
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.spec.json"
+    }
+  ],
+  "extends": "../../tsconfig.base.json"
+}

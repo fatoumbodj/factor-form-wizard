@@ -1,0 +1,11 @@
+.main-content {
+  position: relative;
+  margin-left: 300px;
+  padding: 20px; /* Add padding to the main content */
+}
+
+.content-body {
+  flex: 1; 
+  background-color: red; /* Adjust the background color as needed */
+  padding: 20px; /* Add padding to the main content */
+}

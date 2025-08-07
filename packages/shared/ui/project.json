@@ -1,0 +1,39 @@
+{
+  "name": "@leasing/ui",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/packages/shared/ui",
+        "main": "src/index.ts",
+        "tsConfig": "packages/shared/ui/tsconfig.lib.json",
+        "assets": []
+      }
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "options": {
+        "lintFilePatterns": ["packages/shared/ui/**/*.ts", "packages/shared/ui/**/*.tsx"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "options": {
+        "passWithNoTests": true,
+        "reporters": ["default"]
+      }
+    },
+    "storybook": {
+      "executor": "@nx/storybook:storybook",
+      "options": {
+        "configDir": "packages/shared/ui/.storybook",
+        "buildTarget": "@leasing/ui:build",
+        "compiler": "swc"
+      }
+    }
+  },
+  "tags": ["scope:shared", "type:ui"]
+}

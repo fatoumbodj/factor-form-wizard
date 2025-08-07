@@ -1,0 +1,11 @@
+{
+  "name": "@leasing/admin-portal",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "@leasing/ui": "workspace:*",
+    "@leasing/app-shell": "workspace:*",
+    "@leasing/domain": "workspace:*",
+    "@leasing/infrastructure": "workspace:*"
+  }
+}

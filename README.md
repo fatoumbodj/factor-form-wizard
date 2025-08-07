@@ -1,73 +1,239 @@
-# Welcome to your Lovable project
 
-## Project info
+# 🚗 Leasing Frontend Project 
 
-**URL**: https://lovable.dev/projects/1cbe8a25-64ce-43cf-98f6-b46ace8a6b98
+This project is a **monorepo** application built using **Nx**, **React**, and **Vite**, structured for modularity, scalability, and clean architecture using Domain and Infrastructure layers.
 
-## How can I edit this code?
+## 📁 Project Structure
 
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/1cbe8a25-64ce-43cf-98f6-b46ace8a6b98) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+.
+├── apps/
+│   ├── admin-portal/     # Main React frontend app
+├── packages/
+│   ├── domain/           # Domain logic (Types, services, interfaces)
+│   ├── infrastructure/   # Infrastructure implementations (Axios, Storage, etc.)
+│   ├── shared/
+│   │   ├── ui/            # Design system & UI components
+│   │   ├── app-shell/     # Layout global (Header, Sidebar, etc.)
+├── tsconfig.base.json
+├── nx.json
+├── package.json
+└── pnpm-workspace.yaml
 ```
 
-**Edit a file directly in GitHub**
+## ⚙️ Technologies
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+| Tool                                                                                         | Role                                     |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| [Nx](https://nx.dev)                                                                         | Monorepo management & code orchestration |
+| [React](https://react.dev)                                                                   | Main UI framework                        |
+| [Vite](https://vitejs.dev)                                                                   | Fast bundler and development server      |
+| [TypeScript](https://www.typescriptlang.org/)                                                | Static typing                            |
+| [MUI](https://mui.com)                                                                       | UI components                            |
+| [Zod](https://zod.dev)                                                                       | Schema validation                        |
+| [@tanstack/react-form](https://tanstack.com/query/latest/docs/framework/react-form/overview) | Typesafe forms                           |
+| [Storybook](https://storybook.js.org)                                                        | Component documentation & visual testing |
+| [ESLint](https://eslint.org)                                                                 | Linter                                   |
+| [Vitest](https://vitest.dev)                                                                 | Unit testing                             |
+| [pnpm](https://pnpm.io)                                                                      | Package manager                          |
 
-**Use GitHub Codespaces**
+## 🚀 Getting Started
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+pnpm install
+pnpm nx dev admin-portal
+```
 
-## What technologies are used for this project?
+## 📁 Environment Variables
 
-This project is built with:
+Create `.env` file under `apps/admin-portal/`:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```env
+API_BASE_URL=https://your-api-url.com
 
-## How can I deploy this project?
+```
 
-Simply open [Lovable](https://lovable.dev/projects/1cbe8a25-64ce-43cf-98f6-b46ace8a6b98) and click on Share -> Publish.
+### Vite Proxy
 
-## Can I connect a custom domain to my Lovable project?
+In `vite.config.ts`:
 
-Yes, you can!
+```ts
+server: {
+  proxy: {
+    '/api': {
+      target: env.API_BASE_URL,
+      changeOrigin: true,
+      rewrite: path => path.replace(/^\/api/, ''),
+    },
+  },
+}
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 🧱 Design System - @leasing/ui
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+All shared UI components (buttons, inputs, layouts, etc.) are grouped in `packages/shared/ui`.
+
+```tsx
+export const PrimaryButton = ({ text, sx, onClick }: Props) => {
+  const theme = useTheme()
+  return (
+    <Button
+      variant="contained"
+      sx={{ background: theme.palette.secondary.main, ...sx }}
+      onClick={onClick}
+    >
+      {text}
+    </Button>
+  )
+}
+```
+Each component has an associated `*.stories.tsx` file in `lib/` to enable visualization via Storybook.
+
+Run Storybook:
+
+```bash
+pnpm nx storybook @leasing/ui
+```
+
+## 🧩 App-Shell- @leasing/app-hell
+Contains global components such as Header, Sidebar, Layout, etc. It is used as the main wrapper in `admin-portal`.
+
+## 🔌 HTTP Client (Domain + Infrastructure)
+
+### In `domain`:
+
+```ts
+export interface ApiClient {
+  get<T>(url: string): Promise<T>;
+  post<T>(url: string, data: unknown): Promise<T>;
+}
+```
+
+### In `infra`:
+
+```ts
+
+export const createHttpClient = ({ baseURL, token, onUnauthorized }: HttpParams): ApiClient => {
+  const axiosInstance = axios.create({ baseURL });
+  axiosInstance.interceptors.request.use(...);
+  axiosInstance.interceptors.response.use(...);
+  return {
+        get: async <T>(url: string) => {
+            const response = await instance.get<T>(url);
+            return response.data;
+        },
+
+        post: async <T>(url: string, data: unknown) => {
+            const response = await instance.post<T>(url, data);
+            return response.data;
+        }
+    };
+};
+```
+
+## 📦 Storage Abstraction
+
+### In `domain`:
+
+```ts
+export interface Storage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+  clear(): void;
+}
+
+export class StorageService {
+  constructor(private storage: Storage) {}
+  ...
+}
+```
+
+## 🧠 React Query
+
+### Queries
+
+```ts
+export const usePropositionsQuery = () => {
+  return useQuery<Proposition[]>({
+    queryKey: ['propositions'],
+    queryFn: () =>
+      httpClient.get(ENDPOINTS.PROPOSITIONS),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false
+  });
+}
+```
+
+### Mutations
+
+```ts
+export const useCreateProposition = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: CreatePropositionRequest) =>
+      httpClient.post(ENDPOINTS.PROPOSITIONS, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['propositions'] });
+    },
+    onError: (error: Error) => {
+      console.log("An error Occurred", error.message);
+    }
+  });
+};
+```
+
+## 📝 Forms
+
+Using TanStack Form with Zod:
+
+```ts
+const schema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
+const form = useForm({
+  defaultValues: { email: '', password: '' },
+  validators: { onChange: schema },
+});
+```
+
+### MUI Integration
+
+```tsx
+<form.Field name="email">
+  {(field) => (
+    <TextField
+      {...field.getInputProps()}
+      error={!!field.state.meta.errors?.length}
+      helperText={field.state.meta.errors?.[0]?.message}
+    />
+  )}
+</form.Field>
+```
+
+## ✅ Useful Commands
+
+```bash
+pnpm nx graph                        # Visualize project dependencies
+pnpm nx storybook @leasing/ui       # Launch Storybook
+pnpm nx test @leasing/ui            # Test the design system
+pnpm nx build @leasing/ui           # Build the library
+pnpm nx lint                        # Run lint checks
+pnpm nx generate ...           # Generate components/features
+```
+
+## 🧠 Best Practices
+
+- `@leasing/*` aliases via `tsconfig.base.json`
+- `domain` = logic & abstraction only
+- `infra` = actual implementations (axios, storage)
+- Avoid `any`, use strict typing
+- Use React Query for async calls
+- Group queries & mutations by domain
+
+---
+
+Feel free to improve this README with team conventions or new modules! 🚀
