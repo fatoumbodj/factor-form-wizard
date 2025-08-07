@@ -12,4 +12,13 @@ export const usePropositionsQuery = () => {
     refetchOnWindowFocus: false
   });
 }
- 
+
+export const usePropositionQuery = (id: string) => {
+  return useQuery<Proposition>({
+    queryKey: ['propositions', id],
+    queryFn: () => httpClient.get(`${ENDPOINTS.PROPOSITIONS}/${id}`),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false
+  });
+}

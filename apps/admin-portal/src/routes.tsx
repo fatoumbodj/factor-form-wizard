@@ -3,6 +3,10 @@ import { GroupRouteParamsType, SingleRouteParamsType, RouteParams } from "./type
 import { LeasingUi } from '@leasing/ui'
 import { DashboardPage } from "./pages/dashboard/Dashboard.page";
 import { SharedUIPage } from "./pages/ui/SharedUI.page";
+import { PropositionListPage } from "./pages/propositions/PropositionList.page";
+import { PropositionCreatePage } from "./pages/propositions/PropositionCreate.page";
+import { PropositionDetailPage } from "./pages/propositions/PropositionDetail.page";
+import { PropositionEditPage } from "./pages/propositions/PropositionEdit.page";
 
 var routes: Array<RouteParams> = [
   {
@@ -17,11 +21,38 @@ var routes: Array<RouteParams> = [
   {
     tag: SingleRouteParamsType,
     path: "/leasing/propositions",
-    name: "Proposition",
+    name: "Propositions",
     icon: <HistoryEduOutlined />,
-    component: <LeasingUi />,
+    component: <PropositionListPage />,
     layout: true,
     menu: true,
+  },
+  {
+    tag: SingleRouteParamsType,
+    path: "/leasing/propositions/new",
+    name: "Créer une proposition",
+    icon: <HistoryEduOutlined />,
+    component: <PropositionCreatePage />,
+    layout: true,
+    menu: false,
+  },
+  {
+    tag: SingleRouteParamsType,
+    path: "/leasing/propositions/:id",
+    name: "Détail proposition",
+    icon: <HistoryEduOutlined />,
+    component: <PropositionDetailPage />,
+    layout: true,
+    menu: false,
+  },
+  {
+    tag: SingleRouteParamsType,
+    path: "/leasing/propositions/:id/edit",
+    name: "Modifier proposition",
+    icon: <HistoryEduOutlined />,
+    component: <PropositionEditPage />,
+    layout: true,
+    menu: false,
   },
   {
     tag: SingleRouteParamsType,
